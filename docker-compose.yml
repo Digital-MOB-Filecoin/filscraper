@@ -1,0 +1,33 @@
+version: '3.7'
+
+services:
+  postgress-server:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: filscraper
+    networks:
+      - webnet
+  filscraper:
+    container_name: filscraper
+    restart: on-failure
+    environment:
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: filscraper
+      DB_HOST: postgress-server
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/usr/src/app
+      - node_modules:/usr/src/app/node_modules
+    command: node index.js
+    networks:
+      - webnet
+networks:
+  webnet:
+volumes:
+  node_modules:
