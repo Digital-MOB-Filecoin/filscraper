@@ -4,8 +4,11 @@ const { INFO, ERROR, WARNING } = require('./logs');
 const { FilecoinChainInfo } = require('./filecoinchaininfo');
 const { create_filmessages_table, create_filblocks_table, create_filbadblocks_table } = require('./migrations');
 const { save_messages, save_block, save_bad_block, get_start_block, get_bad_blocks, have_block } = require('./db');
+const { hdiff } = require('./utils');
 
-const SCRAPE_LIMIT = 10
+const SCRAPE_LIMIT = 10 // blocks
+const RESCRAPE_INTERVAL = 1 // hours
+let last_rescrape = Date.now();
 
 let filecoinChainInfo = new FilecoinChainInfo(config.lotus.api, config.lotus.token);
 let stop = false;
@@ -66,6 +69,13 @@ async function rescrape() {
     let blocks;
     let i = 0;
 
+    if (hdiff(last_rescrape) < RESCRAPE_INTERVAL) {
+        INFO('[Rescrape] skip');
+        return;
+    }
+
+    last_rescrape = Date.now();
+
     do {
         blocks = await get_bad_blocks(SCRAPE_LIMIT, i * SCRAPE_LIMIT);
 
@@ -73,7 +83,7 @@ async function rescrape() {
             try {
                 await scrape_block(block.block);
             } catch (error) {
-                ERROR(`[Scrape] error :`);
+                ERROR(`[Rescrape] error :`);
                 console.error(error);
             }
         }));
