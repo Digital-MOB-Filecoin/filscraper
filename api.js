@@ -2,7 +2,6 @@ const config = require('./config');
 const { Pool } = require("pg");
 const { version } = require('./package.json');
 const { INFO, ERROR, WARNING } = require('./logs');
-const { save_messages, save_block, save_bad_block, get_start_block, get_bad_blocks, have_block } = require('./db');
 
 var express = require("express");
 var cors = require('cors');
@@ -25,7 +24,7 @@ app.get("/get_block", async function (req, res, next) {
 
         try {
             const client = await pool.connect()
-            var result = await client.query(`SELECT * FROM filmessages WHERE block=${block}`);
+            var result = await client.query(`SELECT * FROM fil_messages WHERE block=${block}`);
             client.release();
 
             res.json(result.rows);
@@ -41,17 +40,34 @@ app.get("/get_block", async function (req, res, next) {
     }
 });
 
+app.get("/network", async function (req, res, next) {
+    let code = 200;
+    let msg = 'successful';
+
+    try {
+        const client = await pool.connect()
+        var result = await client.query(`SELECT * FROM fil_network`);
+        client.release();
+
+        res.json(result.rows);
+    } catch (e) {
+        code = 401;
+        msg = 'Failed to get fil_network data';
+        res.status(code).send(msg);
+    }
+
+});
+
 app.get("/get_head", async function (req, res, next) {
     let code = 200;
     let msg = 'successful';
 
     try {
         const client = await pool.connect()
-        var result = await client.query('SELECT MAX(Block) FROM FilBlocks ');
+        var result = await client.query('SELECT MAX(Block) FROM fil_blocks ');
         client.release();
 
         res.json(result.rows);
-        INFO(`FilScraper API get_head ${result.rows} messages`);
 
     } catch (e) {
         code = 401;

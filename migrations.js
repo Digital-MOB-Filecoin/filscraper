@@ -1,16 +1,47 @@
 const { Pool } = require("pg");
 const config = require('./config');
-const pool = new Pool(config.database);
 
-const create_filmessages_table = async function () {
-    const client = await pool.connect();
 
-    /*await client.query("\
-        DROP TABLE filmessages \
-        ");*/
+class Migrations {
 
-    await client.query("\
-        CREATE TABLE IF NOT EXISTS FilMessages\
+    constructor() {
+        this.pool = new Pool(config.database);
+    }
+
+    async create_filblocks_table() {
+        const client = await this.pool.connect();
+
+        await client.query("\
+        CREATE TABLE IF NOT EXISTS fil_blocks\
+        (\
+            Block bigint NOT NULL UNIQUE,\
+            Msgs bigint NOT NULL,\
+            Created timestamp default now(),\
+            PRIMARY KEY (Block) \
+        )");
+
+        client.release()
+    }
+
+    async create_filbadblocks_table() {
+        const client = await this.pool.connect();
+
+        await client.query("\
+        CREATE TABLE IF NOT EXISTS fil_bad_blocks\
+        (\
+            Block bigint NOT NULL,\
+            Created timestamp default now(),\
+            PRIMARY KEY (Block) \
+        )");
+
+        client.release()
+    }
+
+    async create_filmessages_table() {
+        const client = await this.pool.connect();
+
+        await client.query("\
+        CREATE TABLE IF NOT EXISTS fil_messages\
         (\
             CID text NOT NULL,\
             Block bigint NOT NULL,\
@@ -29,45 +60,51 @@ const create_filmessages_table = async function () {
             Version integer NOT NULL\
         )");
 
-    client.release()
-}
+        client.release()
+    }
 
-const create_filblocks_table = async function () {
-    const client = await pool.connect();
+    async create_filsectors_table() {
+        const client = await this.pool.connect();
 
-    /*await client.query("\
-        DROP TABLE filblocks \
-        ");*/
-
-    await client.query("\
-        CREATE TABLE IF NOT EXISTS FilBlocks\
+        await client.query("\
+        CREATE TABLE IF NOT EXISTS fil_sectors\
         (\
-            Block bigint NOT NULL UNIQUE,\
-            Msgs bigint NOT NULL,\
-            Created timestamp default now(),\
-            PRIMARY KEY (Block) \
+            sector bigint NOT NULL,\
+            miner text NOT NULL,\
+            type text NOT NULL,\
+            size bigint NOT NULL,\
+            start_epoch bigint NOT NULL,\
+            end_epoch bigint NOT NULL\
         )");
 
-    client.release()
-}
+        client.release()
+    }
 
-const create_filbadblocks_table = async function () {
-    const client = await pool.connect();
+    async create_filnetwork_table() {
+        const client = await this.pool.connect();
 
-    await client.query("\
-        CREATE TABLE IF NOT EXISTS FilBadBlocks\
+        await client.query("\
+        CREATE TABLE IF NOT EXISTS fil_network\
         (\
-            Block bigint NOT NULL,\
-            Created timestamp default now(),\
-            PRIMARY KEY (Block) \
+            epoch bigint NOT NULL UNIQUE,\
+            commited bigint NOT NULL,\
+            used bigint NOT NULL,\
+            PRIMARY KEY (epoch) \
         )");
 
-    client.release()
+        client.release()
+    }
+
+    async run() {
+        await this.create_filblocks_table();
+        await this.create_filbadblocks_table();
+        await this.create_filmessages_table();
+        await this.create_filsectors_table();
+        await this.create_filnetwork_table();
+    }
 }
 
 module.exports = {
-    create_filmessages_table,
-    create_filblocks_table,
-    create_filbadblocks_table
-  }
+    Migrations
+}
 

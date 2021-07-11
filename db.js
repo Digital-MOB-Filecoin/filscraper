@@ -2,18 +2,22 @@ const { Pool } = require("pg");
 const config = require('./config');
 const { INFO, ERROR, WARNING } = require('./logs');
 
-const pool = new Pool(config.database);
+class DB {
 
-const save_messages = async function (msgs) {
-    const client = await pool.connect();
+    constructor() {
+        this.pool = new Pool(config.database);
+    }
 
-    for (let i = 0; i < msgs.length; i++) {
-        const msg = msgs[i];
-        try {
-            const { '/': msgCid } = msg.CID;
+    async save_messages(msgs) {
+        const client = await this.pool.connect();
 
-            await client.query(`\
-        INSERT INTO filmessages (CID, Block, \"from\", \"to\", Nonce, Value, GasLimit, GasFeeCap, GasPremium, Method, Params, ExitCode, Return, GasUsed, Version) \
+        for (let i = 0; i < msgs.length; i++) {
+            const msg = msgs[i];
+            try {
+                const { '/': msgCid } = msg.CID;
+
+                await client.query(`\
+        INSERT INTO fil_messages (CID, Block, \"from\", \"to\", Nonce, Value, GasLimit, GasFeeCap, GasPremium, Method, Params, ExitCode, Return, GasUsed, Version) \
         VALUES ('${msgCid}', \
         '${msg.block}', \
         '${msg.From}', \
@@ -31,106 +35,129 @@ const save_messages = async function (msgs) {
         '${msg.Version}') \
 `);
 
-        } catch (err) {
-            WARNING(`[SaveMessages] ${err?.detail}`)
+            } catch (err) {
+                WARNING(`[SaveMessages] ${err?.detail}`)
+            }
+
         }
 
+        client.release();
     }
 
-    client.release();
-}
-
-const save_block = async function (block, msgs) {
-    const client = await pool.connect();
-    try {
-        await client.query(`\
-           INSERT INTO FilBlocks (Block, Msgs) \
+    async save_block(block, msgs) {
+        const client = await this.pool.connect();
+        try {
+            await client.query(`\
+           INSERT INTO fil_blocks (Block, Msgs) \
            VALUES ('${block}', '${msgs}') `);
 
 
-    } catch (err) {
-        WARNING(`[SaveBlock] ${err?.detail}`)
+        } catch (err) {
+            WARNING(`[SaveBlock] ${err?.detail}`)
+        }
+        client.release()
     }
-    client.release()
-}
 
-const save_bad_block = async function (block) {
-    const client = await pool.connect();
-    try {
-        await client.query(`\
-           INSERT INTO FilBadBlocks (Block) \
+    async save_bad_block(block) {
+        const client = await this.pool.connect();
+        try {
+            await client.query(`\
+           INSERT INTO fil_bad_blocks (Block) \
            VALUES ('${block}') `);
 
 
-    } catch (err) {
-        WARNING(`[SaveBadBlock] ${err?.detail}`)
+        } catch (err) {
+            WARNING(`[SaveBadBlock] ${err?.detail}`)
+        }
+        client.release()
     }
-    client.release()
-}
 
-const get_start_block = async function () {
-    const client = await pool.connect();
-    let block = config.scraper.start;
-    try {
-        const result = await client.query(`\
+    async get_start_block() {
+        const client = await this.pool.connect();
+        let block = config.scraper.start;
+        try {
+            const result = await client.query(`\
         SELECT MAX(Block) \
-        FROM FilBlocks `);
+        FROM fil_blocks `);
 
-        if (result?.rows[0]?.max) {
-            block = result?.rows[0]?.max;
+            if (result?.rows[0]?.max) {
+                block = result?.rows[0]?.max;
+            }
+        } catch (err) {
+            WARNING(`[GetMaxBlock] ${err?.detail}`)
         }
-    } catch (err) {
-        WARNING(`[GetMaxBlock] ${err?.detail}`)
+        client.release()
+
+        return block;
     }
-    client.release()
 
-    return block;
-}
+    async get_bad_blocks(limit, offset) {
+        const client = await this.pool.connect();
+        let rows = undefined;
+        try {
+            const result = await client.query(`\
+        SELECT block FROM fil_bad_blocks ORDER BY block LIMIT ${limit} OFFSET ${offset}`);
 
-const get_bad_blocks = async function (limit, offset) {
-    const client = await pool.connect();
-    let rows = undefined;
-    try {
-        const result = await client.query(`\
-        SELECT block FROM filbadblocks ORDER BY block LIMIT ${limit} OFFSET ${offset}`);
-
-        if (result?.rows) {
-            rows = result?.rows;
+            if (result?.rows) {
+                rows = result?.rows;
+            }
+        } catch (err) {
+            WARNING(`[GetBadBlocks] ${err?.detail}`)
         }
-    } catch (err) {
-        WARNING(`[GetBadBlocks] ${err?.detail}`)
+        client.release()
+
+        return rows;
     }
-    client.release()
 
-    return rows;
-}
+    async have_block(block) {
+        const client = await this.pool.connect();
+        let found = false;
 
-const have_block = async function (block) {
-    const client = await pool.connect();
-    let found = false;
+        try {
+            const result = await client.query(`\
+        SELECT EXISTS(SELECT 1 FROM fil_blocks WHERE Block = ${block})`);
 
-    try {
-        const result = await client.query(`\
-        SELECT EXISTS(SELECT 1 FROM FilBlocks WHERE Block = ${block})`);
+            if (result?.rows[0]?.exists) {
+                found = true;
+            }
 
-        if (result?.rows[0]?.exists) {
-            found = true;
+        } catch (err) {
+            WARNING(`[HaveBlock] ${err}`)
         }
-   
-    } catch (err) {
-        WARNING(`[HaveBlock] ${err}`)
-    }
-    client.release()
+        client.release()
 
-    return found;
+        return found;
+    }
+
+    async save_sector(sector_info) {
+        const client = await this.pool.connect();
+        try {
+            await client.query(`\
+           INSERT INTO fil_sectors (sector, miner, type, size, start_epoch, end_epoch) \
+           VALUES ('${sector_info.sector}', '${sector_info.miner}','${sector_info.type}','${sector_info.size}','${sector_info.start_epoch}','${sector_info.end_epoch}') `);
+
+
+        } catch (err) {
+            WARNING(`[SaveSector] ${err}`)
+        }
+        client.release()
+    }
+
+    async save_network(network_info) {
+        const client = await this.pool.connect();
+        try {
+            await client.query(`\
+           INSERT INTO fil_network (epoch, commited, used) \
+           VALUES ('${network_info.epoch}', '${network_info.commited}','${network_info.used}') `);
+
+
+        } catch (err) {
+            WARNING(`[SaveSector] ${err}`)
+        }
+        client.release()
+    }
 }
 
 module.exports = {
-    save_messages,
-    save_block,
-    save_bad_block,
-    get_start_block,
-    get_bad_blocks,
-    have_block
-  }
-
+    DB
+}
