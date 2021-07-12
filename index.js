@@ -272,8 +272,12 @@ async function scrape() {
         return;
     }
 
-    const start_block = await db.get_start_block();
+    let start_block = await db.get_start_block();
     const end_block = chainHead - 1;
+
+    if (start_block < config.scraper.start) {
+        start_block = config.scraper.start;
+    }
 
     INFO(`[Scrape] from ${start_block} to ${end_block}`);
 
