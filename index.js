@@ -10,7 +10,7 @@ const { MinerMethods } = require('./miner-methods');
 const { decodeRLE2 } = require('./rle');
 const { hdiff } = require('./utils');
 
-const SCRAPE_LIMIT = 10 // blocks
+const SCRAPE_LIMIT = 100 // blocks
 const RESCRAPE_INTERVAL = 1 // hours
 let last_rescrape = Date.now();
 

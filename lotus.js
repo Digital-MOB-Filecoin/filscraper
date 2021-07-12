@@ -10,7 +10,7 @@ class Lotus {
         this.token = token;
     }
 
-    async LotusAPI(method, params, timeout = 30000) {
+    async LotusAPI(method, params, timeout = 10000) {
         let body = JSON.stringify({
             "jsonrpc": "2.0",
             "method": `Filecoin.${method}`,
@@ -66,12 +66,12 @@ class Lotus {
         return this.LotusAPI("ChainGetTipSetByHeight", [chainEpoch, tipSetKey]);
     }
 
-    ChainGetParentMessages(blockCid, timeout = 180000) {
-        return this.LotusAPI("ChainGetParentMessages", [{"/":blockCid}], timeout);
+    ChainGetParentMessages(blockCid) {
+        return this.LotusAPI("ChainGetParentMessages", [{"/":blockCid}]);
     }
 
-    ChainGetParentReceipts(blockCid, timeout = 180000) {
-        return this.LotusAPI("ChainGetParentReceipts", [{"/":blockCid}], timeout);
+    ChainGetParentReceipts(blockCid) {
+        return this.LotusAPI("ChainGetParentReceipts", [{"/":blockCid}]);
     }
 
     ChainHead() {
