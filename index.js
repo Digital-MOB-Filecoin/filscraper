@@ -33,7 +33,30 @@ function decode_sectors(buffer) {
     return sectors;
 }
 
+function get_miner_events(miner_events, miner, epoch) {
+    let miner_event;
+
+    if (miner_events.has(miner)) {
+        miner_event = miner_events.get(miner);
+    } else {
+        miner_event = {
+            miner: miner,
+            commited: new BN('0', 10),
+            used: new BN('0', 10),
+            activated: 0,
+            terminated: 0,
+            faults: 0,
+            recovered: 0,
+            proofs: 0,
+            epoch: epoch
+        }
+    }
+
+    return miner_event;
+}
+
 async function process_messages(block, messages) {
+    let miner_events = new Map();
     var messagesSlice = messages;
 
     var used = new BN('0', 10);
@@ -84,56 +107,59 @@ async function process_messages(block, messages) {
                                 db.save_sector(sector_info);
                                 commited = commited.add(new BN(sector_size));
 
+                                let miner_event = get_miner_events(miner_events, miner, msg.block)
+                                miner_event.activated++;
+                                miner_event.commited = miner_event.commited.add(new BN(sector_size));
+                                miner_events.set(miner, miner_event);
+
                                 // 'miners' TABLE -> lotus.StateMinerInfo
                                 // miner
                                 // sector_size
 
-                                // 'sectors' TABLE ->
-                                // miner
-                                // sector
-                                // size
-                                // type  : used/commited
-                                // start_epoch
-                                // end_epoch
 
-                                // 'deals' TABLE
-                                // deal
-                                // miner
-                                // sector
-                                // start_epoch
-                                // end_epoch
 
-                                // 'sectors_events' TABLE
-                                // type : terminate/fault/recover
-                                // miner :
-                                // sector :
-                                // epoch :
 
-                                // 'sectors_events' TABLE
-                                // type : terminate/fault/recover
-                                // miner :
-                                // sectors_length :
-                                // sectors :
-                                // epoch :
-
-                                // 'network' TABLE
-                                // epoch
-                                // commited
-                                // used
-
-                                //commited capacity sector
-                                //INFO(`[PreCommitSector] Miner:${miner} SectorNumber: ${preCommitSector.SectorNumber}`);
                             } else {
                                 //used sector
                                 sector_info.type = 'used';
                                 db.save_sector(sector_info);
                                 used = used.add(new BN(sector_size));
-                                //INFO(`[PreCommitSector] Miner:${miner} SectorNumber: ${preCommitSector.SectorNumber} DealIDs: ${preCommitSector.DealIDs}`);
+
+                                for (let i = 0; i < preCommitSector.DealIDs.length; i++) {
+                                    let deal_info = {
+                                        deal: preCommitSector.DealIDs[i],
+                                        sector: preCommitSector.SectorNumber,
+                                        miner: miner,
+                                        start_epoch: msg.block,
+                                        end_epoch: preCommitSector.Expiration,
+                                    }
+                                    db.save_deal(deal_info);
+                                }
+
+                                let miner_event = get_miner_events(miner_events, miner, msg.block)
+                                miner_event.activated++;
+                                miner_event.used = miner_event.used.add(new BN(sector_size));
+                                miner_events.set(miner, miner_event);
                             }
                         }
                             break;
                         case MinerMethods.TerminateSectors: {
                             let sectors = decode_sectors(Buffer.from(decoded_params[0][0][2]));
+
+                            for (let i = 0; i < sectors.length; i++) {
+                                let sector_events = {
+                                    type: 'terminate',
+                                    miner: miner,
+                                    sector: sectors[i],
+                                    epoch: msg.block,
+                                }
+
+                                db.save_sector_events(sector_events);
+                            }
+
+                            let miner_event = get_miner_events(miner_events, miner, msg.block)
+                            miner_event.terminated++;
+                            miner_events.set(miner, miner_event);
 
                             INFO(`[TerminateSectors] Miner:${miner} sectors: ${sectors} sectors`);
                         }
@@ -141,23 +167,58 @@ async function process_messages(block, messages) {
                         case MinerMethods.DeclareFaults: {
                             let sectors = decode_sectors(Buffer.from(decoded_params[0][0][2]));
 
+                            for (let i = 0; i < sectors.length; i++) {
+                                let sector_events = {
+                                    type: 'fault',
+                                    miner: miner,
+                                    sector: sectors[i],
+                                    epoch: msg.block,
+                                }
+
+                                db.save_sector_events(sector_events);
+                            }
+
+                            let miner_event = get_miner_events(miner_events, miner, msg.block)
+                            miner_event.faults++;
+                            miner_events.set(miner, miner_event);
+
                             INFO(`[DeclareFaults] Miner:${miner} for ${sectors.length} sectors`);
                         }
                             break;
                         case MinerMethods.DeclareFaultsRecovered: {
                             let sectors = decode_sectors(Buffer.from(decoded_params[0][0][2]));
 
+                            for (let i = 0; i < sectors.length; i++) {
+                                let sector_events = {
+                                    type: 'recovered',
+                                    miner: miner,
+                                    sector: sectors[i],
+                                    epoch: msg.block,
+                                }
+
+                                db.save_sector_events(sector_events);
+                            }
+
+                            let miner_event = get_miner_events(miner_events, miner, msg.block)
+                            miner_event.recovered++;
+                            miner_events.set(miner, miner_event);
+
                             INFO(`[DeclareFaultsRecovered] Miner:${miner} for ${sectors.length} sectors`);
                         }
                             break;
                         case MinerMethods.ProveCommitSector: {
-                            const commitedSectorProof = {
-                                miner: msg.To,
+                            let sector_events = {
+                                type: 'proof',
+                                miner: miner,
                                 sector: decoded_params[0],
                                 epoch: msg.block,
                             }
 
-                            //INFO(`[ProveCommitSector] proof:${JSON.stringify(commitedSectorProof)}`);
+                            db.save_sector_events(sector_events);
+
+                            let miner_event = get_miner_events(miner_events, miner, msg.block)
+                            miner_event.proofs++;
+                            miner_events.set(miner, miner_event);
                         }
                             break;
 
@@ -175,6 +236,10 @@ async function process_messages(block, messages) {
     }
 
     await db.save_network(network_info);
+
+    miner_events.forEach((value, key, map) => {
+        db.save_miner_events(key, value);
+    });
 }
 
 async function scrape_block(block) {

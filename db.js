@@ -143,6 +143,48 @@ class DB {
         client.release()
     }
 
+    async save_sector_events(sector_events) {
+        const client = await this.pool.connect();
+        try {
+            await client.query(`\
+           INSERT INTO fil_sector_events (type, miner, sector, epoch) \
+           VALUES ('${sector_events.type}', '${sector_events.miner}','${sector_events.sector}','${sector_events.epoch}') `);
+
+
+        } catch (err) {
+            WARNING(`[SaveSectorEvents] ${err}`)
+        }
+        client.release()
+    }
+
+    async save_miner_events(miner, events) {
+        const client = await this.pool.connect();
+        try {
+            await client.query(`\
+           INSERT INTO fil_miner_events (miner, commited, used, activated, terminated, faults, recovered, proofs, epoch) \
+           VALUES ('${miner}', '${events.commited.toString(10)}','${events.used.toString(10)}','${events.activated}','${events.terminated}','${events.faults}','${events.recovered}','${events.proofs}','${events.epoch}') `);
+
+
+        } catch (err) {
+            WARNING(`[SaveMinerEvents] ${err}`)
+        }
+        client.release()
+    }
+
+    async save_deal(deal_info) {
+        const client = await this.pool.connect();
+        try {
+            await client.query(`\
+           INSERT INTO fil_deals (deal, sector, miner, start_epoch, end_epoch) \
+           VALUES ('${deal_info.deal}', '${deal_info.sector}','${deal_info.miner}','${deal_info.start_epoch}','${deal_info.end_epoch}') `);
+
+
+        } catch (err) {
+            WARNING(`[SaveDeal] ${err}`)
+        }
+        client.release()
+    }
+
     async save_network(network_info) {
         const client = await this.pool.connect();
         try {
@@ -152,7 +194,7 @@ class DB {
 
 
         } catch (err) {
-            WARNING(`[SaveSector] ${err}`)
+            WARNING(`[SaveNetwork] ${err}`)
         }
         client.release()
     }

@@ -80,6 +80,61 @@ class Migrations {
         client.release()
     }
 
+    async create_filsectorevents_table() {
+        const client = await this.pool.connect();
+
+        await client.query("\
+        CREATE TABLE IF NOT EXISTS fil_sector_events\
+        (\
+            type text NOT NULL,\
+            miner text NOT NULL,\
+            sector bigint NOT NULL,\
+            epoch bigint NOT NULL\
+        )");
+
+        client.release()
+    }
+
+    async create_fildeals_table() {
+        const client = await this.pool.connect();
+
+        await client.query("\
+        CREATE TABLE IF NOT EXISTS fil_deals\
+        (\
+            deal bigint NOT NULL UNIQUE,\
+            sector bigint NOT NULL,\
+            miner text NOT NULL,\
+            start_epoch bigint NOT NULL,\
+            end_epoch bigint NOT NULL,\
+            PRIMARY KEY (deal) \
+        )");
+
+        client.release()
+    }
+
+
+
+    //PRIMARY (miner,epoch)
+    async create_filminerevents_table() {
+        const client = await this.pool.connect();
+
+        await client.query("\
+            CREATE TABLE IF NOT EXISTS fil_miner_events\
+            (\
+                miner text NOT NULL,\
+                commited bigint NOT NULL,\
+                used bigint NOT NULL,\
+                activated bigint NOT NULL,\
+                terminated bigint NOT NULL,\
+                faults bigint NOT NULL,\
+                recovered bigint NOT NULL,\
+                proofs bigint NOT NULL,\
+                epoch bigint NOT NULL\
+            )");
+
+        client.release()
+    }
+
     async create_filnetwork_table() {
         const client = await this.pool.connect();
 
@@ -100,6 +155,9 @@ class Migrations {
         await this.create_filbadblocks_table();
         await this.create_filmessages_table();
         await this.create_filsectors_table();
+        await this.create_filsectorevents_table();
+        await this.create_fildeals_table();
+        await this.create_filminerevents_table();
         await this.create_filnetwork_table();
     }
 }
