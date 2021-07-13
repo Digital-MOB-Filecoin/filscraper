@@ -17,9 +17,9 @@ class DB {
                 const { '/': msgCid } = msg.CID;
 
                 await client.query(`\
-        INSERT INTO fil_messages (CID, Block, \"from\", \"to\", Nonce, Value, GasLimit, GasFeeCap, GasPremium, Method, Params, ExitCode, Return, GasUsed, Version) \
+        INSERT INTO fil_messages (\"CID\", \"Block\", \"From\", \"To\", \"Nonce\", \"Value\", \"GasLimit\", \"GasFeeCap\", \"GasPremium\", \"Method\", \"Params\", \"ExitCode\", \"Return\", \"GasUsed\", \"Version\") \
         VALUES ('${msgCid}', \
-        '${msg.block}', \
+        '${msg.Block}', \
         '${msg.From}', \
         '${msg.To}', \
         '${msg.Nonce}', \
@@ -29,14 +29,14 @@ class DB {
         '${msg.GasPremium}', \
         '${msg.Method}', \
         '${msg.Params}', \
-        '${msg.receipt.ExitCode}', \
-        '${msg.receipt.Return}', \
-        '${msg.receipt.GasUsed}', \
+        '${msg.ExitCode}', \
+        '${msg.Return}', \
+        '${msg.GasUsed}', \
         '${msg.Version}') \
 `);
 
             } catch (err) {
-                WARNING(`[SaveMessages] ${err?.detail}`)
+                WARNING(`[SaveMessages] ${err}`)
             }
 
         }
@@ -96,7 +96,7 @@ class DB {
         let rows = undefined;
         try {
             const result = await client.query(`\
-        SELECT block FROM fil_bad_blocks ORDER BY block LIMIT ${limit} OFFSET ${offset}`);
+        SELECT block FROM fil_messages ORDER BY block LIMIT ${limit} OFFSET ${offset}`);
 
             if (result?.rows) {
                 rows = result?.rows;
@@ -107,6 +107,24 @@ class DB {
         client.release()
 
         return rows;
+    }
+
+    async get_messages(block) {
+        const client = await this.pool.connect();
+        let messages = [];
+        try {
+            const result = await client.query(`\
+        SELECT * FROM fil_messages WHERE \"Block\"=${block}`);
+
+            if (result?.rows) {
+                messages = result?.rows;
+            }
+        } catch (err) {
+            WARNING(`[GetMessages] ${err}`)
+        }
+        client.release()
+
+        return messages;
     }
 
     async have_block(block) {
@@ -123,6 +141,26 @@ class DB {
 
         } catch (err) {
             WARNING(`[HaveBlock] ${err}`)
+        }
+        client.release()
+
+        return found;
+    }
+
+    async have_messages(block) {
+        const client = await this.pool.connect();
+        let found = false;
+
+        try {
+            const result = await client.query(`\
+        SELECT EXISTS(SELECT 1 FROM fil_messages WHERE \"Block\" = ${block})`);
+
+            if (result?.rows[0]?.exists) {
+                found = true;
+            }
+
+        } catch (err) {
+            WARNING(`[HaveMessages] ${err}`)
         }
         client.release()
 
@@ -161,12 +199,14 @@ class DB {
         const client = await this.pool.connect();
         try {
             await client.query(`\
-           INSERT INTO fil_miner_events (miner, commited, used, activated, terminated, faults, recovered, proofs, epoch) \
-           VALUES ('${miner}', '${events.commited.toString(10)}','${events.used.toString(10)}','${events.activated}','${events.terminated}','${events.faults}','${events.recovered}','${events.proofs}','${events.epoch}') `);
+           INSERT INTO fil_miner_events (miner, commited, used, total, fraction, activated, terminated, faults, recovered, proofs, epoch) \
+           VALUES ('${miner}', '${events.commited.toString(10)}','${events.used.toString(10)}','${events.total.toString(10)}','${events.fraction.toPrecision(5)}','${events.activated}','${events.terminated}','${events.faults}','${events.recovered}','${events.proofs}','${events.epoch}') `);
 
 
         } catch (err) {
-            WARNING(`[SaveMinerEvents] ${err}`)
+            WARNING(`[
+                
+            ] ${err}`)
         }
         client.release()
     }
@@ -189,8 +229,8 @@ class DB {
         const client = await this.pool.connect();
         try {
             await client.query(`\
-           INSERT INTO fil_network (epoch, commited, used) \
-           VALUES ('${network_info.epoch}', '${network_info.commited}','${network_info.used}') `);
+           INSERT INTO fil_network (epoch, commited, used, total, fraction) \
+           VALUES ('${network_info.epoch}', '${network_info.commited.toString(10)}','${network_info.used.toString(10)}','${network_info.total.toString(10)}','${network_info.fraction.toPrecision(5)}') `);
 
 
         } catch (err) {

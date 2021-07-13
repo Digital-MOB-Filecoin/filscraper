@@ -1,6 +1,7 @@
 const config = require('./config');
 const cbor = require('borc');
 const BN = require('bn.js');
+const Big = require('big.js');
 const { version } = require('./package.json');
 const { INFO, ERROR, WARNING } = require('./logs');
 const { FilecoinChainInfo } = require('./filecoinchaininfo');
@@ -43,6 +44,7 @@ function get_miner_events(miner_events, miner, epoch) {
             miner: miner,
             commited: new BN('0', 10),
             used: new BN('0', 10),
+            total: new BN('0', 10),
             activated: 0,
             terminated: 0,
             faults: 0,
@@ -64,13 +66,13 @@ async function process_messages(block, messages) {
 
     while (messagesSlice.length) {
         await Promise.all(messagesSlice.splice(0, 50).map(async (msg) => {
-            if (msg.receipt.ExitCode == 0 && msg.Params && msg.To.startsWith('f0')) {
+            if (msg.ExitCode == 0 && msg.Params && msg.To.startsWith('f0')) {
                 let miner = msg.To;
                 let decoded_params = [];
                 try {
                     decoded_params = cbor.decode(msg.Params, 'base64');
                 } catch (error) {
-                    ERROR(`[ProcessMessages] error cbor.decode : ${error}`);
+                    ERROR(`[ProcessMessages] error cbor.decode[${msg.Params}] : ${error}`);
                 }
 
                 if (decoded_params.length > 0) {
@@ -99,7 +101,7 @@ async function process_messages(block, messages) {
                                 miner: miner,
                                 type: 'commited',
                                 size: sector_size,
-                                start_epoch: msg.block,
+                                start_epoch: msg.Block,
                                 end_epoch: preCommitSector.Expiration,
                             }
 
@@ -107,7 +109,7 @@ async function process_messages(block, messages) {
                                 db.save_sector(sector_info);
                                 commited = commited.add(new BN(sector_size));
 
-                                let miner_event = get_miner_events(miner_events, miner, msg.block)
+                                let miner_event = get_miner_events(miner_events, miner, msg.Block)
                                 miner_event.activated++;
                                 miner_event.commited = miner_event.commited.add(new BN(sector_size));
                                 miner_events.set(miner, miner_event);
@@ -130,13 +132,13 @@ async function process_messages(block, messages) {
                                         deal: preCommitSector.DealIDs[i],
                                         sector: preCommitSector.SectorNumber,
                                         miner: miner,
-                                        start_epoch: msg.block,
+                                        start_epoch: msg.Block,
                                         end_epoch: preCommitSector.Expiration,
                                     }
                                     db.save_deal(deal_info);
                                 }
 
-                                let miner_event = get_miner_events(miner_events, miner, msg.block)
+                                let miner_event = get_miner_events(miner_events, miner, msg.Block)
                                 miner_event.activated++;
                                 miner_event.used = miner_event.used.add(new BN(sector_size));
                                 miner_events.set(miner, miner_event);
@@ -151,13 +153,13 @@ async function process_messages(block, messages) {
                                     type: 'terminate',
                                     miner: miner,
                                     sector: sectors[i],
-                                    epoch: msg.block,
+                                    epoch: msg.Block,
                                 }
 
                                 db.save_sector_events(sector_events);
                             }
 
-                            let miner_event = get_miner_events(miner_events, miner, msg.block)
+                            let miner_event = get_miner_events(miner_events, miner, msg.Block)
                             miner_event.terminated++;
                             miner_events.set(miner, miner_event);
 
@@ -172,13 +174,13 @@ async function process_messages(block, messages) {
                                     type: 'fault',
                                     miner: miner,
                                     sector: sectors[i],
-                                    epoch: msg.block,
+                                    epoch: msg.Block,
                                 }
 
                                 db.save_sector_events(sector_events);
                             }
 
-                            let miner_event = get_miner_events(miner_events, miner, msg.block)
+                            let miner_event = get_miner_events(miner_events, miner, msg.Block)
                             miner_event.faults++;
                             miner_events.set(miner, miner_event);
 
@@ -193,13 +195,13 @@ async function process_messages(block, messages) {
                                     type: 'recovered',
                                     miner: miner,
                                     sector: sectors[i],
-                                    epoch: msg.block,
+                                    epoch: msg.Block,
                                 }
 
                                 db.save_sector_events(sector_events);
                             }
 
-                            let miner_event = get_miner_events(miner_events, miner, msg.block)
+                            let miner_event = get_miner_events(miner_events, miner, msg.Block)
                             miner_event.recovered++;
                             miner_events.set(miner, miner_event);
 
@@ -211,12 +213,12 @@ async function process_messages(block, messages) {
                                 type: 'proof',
                                 miner: miner,
                                 sector: decoded_params[0],
-                                epoch: msg.block,
+                                epoch: msg.Block,
                             }
 
                             db.save_sector_events(sector_events);
 
-                            let miner_event = get_miner_events(miner_events, miner, msg.block)
+                            let miner_event = get_miner_events(miner_events, miner, msg.Block)
                             miner_event.proofs++;
                             miner_events.set(miner, miner_event);
                         }
@@ -229,33 +231,67 @@ async function process_messages(block, messages) {
         }))
     }
 
+    let total = commited.add(used);
+
+    let fraction = new Big('0');
+
+    if (!total.isZero()) {
+        fraction = new Big(used.toString(10));
+        fraction = fraction.div(new Big(total.toString(10)));
+    }
+
+    console.log(fraction.toPrecision(5));
+
     let network_info = {
         epoch: block, 
-        used: used.toString(10), 
-        commited: commited.toString(10)
+        used: used, 
+        commited: commited,
+        total: total,
+        fraction: fraction
     }
 
     await db.save_network(network_info);
 
     miner_events.forEach((value, key, map) => {
+        value.total = value.commited.add(value.used);
+        let miner_fraction = new Big('0');
+
+        if (!value.total.isZero()) {
+            miner_fraction = new Big(value.used.toString(10));
+            miner_fraction = miner_fraction.div(new Big(value.total.toString(10)));
+        }
+        value.fraction = miner_fraction;
+
         db.save_miner_events(key, value);
     });
 }
 
 async function scrape_block(block) {
-    const found = await db.have_block(block)
+    let scraped_from_db = false;
+    const found = await db.have_block(block);
     if (found) {
         INFO(`[ScrapeBlock] ${block} already scraped, skipping`);
         return;
     }
 
-    INFO(`[ScrapeBlock] ${block}`);
-    const messages = await filecoinChainInfo.GetBlockMessages(block);
+    let messages = [];
+
+    const found_messages = await db.have_messages(block);
+    if (found_messages) {
+        INFO(`[ScrapeBlock] ${block} from db`);
+        messages = await db.get_messages(block);
+        scraped_from_db = true;
+    } else {
+        INFO(`[ScrapeBlock] ${block}`);
+        messages = await filecoinChainInfo.GetBlockMessages(block);
+    }
 
     if (messages && messages.length > 0) {
         INFO(`[ScrapeBlock] ${block}, ${messages.length} messages`);
         await db.save_block(block, messages.length);
-        await db.save_messages(messages);
+        if (!scraped_from_db) {
+            await db.save_messages(messages);
+        }
         await process_messages(block, messages);
 
         INFO(`[ScrapeBlock] ${block} done`);

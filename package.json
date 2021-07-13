@@ -19,6 +19,7 @@
   "homepage": "https://github.com/Digital-MOB-Filecoin/filscraper#readme",
   "dependencies": {
     "axios": "^0.21.1",
+    "big.js": "^6.1.1",
     "bn": "^1.0.5",
     "bn.js": "^5.2.0",
     "borc": "^3.0.0",

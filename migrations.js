@@ -43,21 +43,21 @@ class Migrations {
         await client.query("\
         CREATE TABLE IF NOT EXISTS fil_messages\
         (\
-            CID text NOT NULL,\
-            Block bigint NOT NULL,\
-            \"from\" text NOT NULL,\
-            \"to\" text NOT NULL,\
-            Nonce bigint NOT NULL,\
-            Value text NOT NULL,\
-            GasLimit bigint NOT NULL,\
-            GasFeeCap text NOT NULL,\
-            GasPremium text NOT NULL,\
-            Method integer NOT NULL,\
-            Params text NOT NULL,\
-            ExitCode integer,\
-            Return text,\
-            GasUsed bigint,\
-            Version integer NOT NULL\
+            \"CID\" text NOT NULL,\
+            \"Block\" bigint NOT NULL,\
+            \"From\" text NOT NULL,\
+            \"To\" text NOT NULL,\
+            \"Nonce\" bigint NOT NULL,\
+            \"Value\" text NOT NULL,\
+            \"GasLimit\" bigint NOT NULL,\
+            \"GasFeeCap\" text NOT NULL,\
+            \"GasPremium\" text NOT NULL,\
+            \"Method\" integer NOT NULL,\
+            \"Params\" text NOT NULL,\
+            \"ExitCode\" integer,\
+            \"Return\" text,\
+            \"GasUsed\" bigint,\
+            \"Version\" integer NOT NULL\
         )");
 
         client.release()
@@ -124,6 +124,8 @@ class Migrations {
                 miner text NOT NULL,\
                 commited bigint NOT NULL,\
                 used bigint NOT NULL,\
+                total bigint NOT NULL,\
+                fraction NUMERIC(5,5) NOT NULL,\
                 activated bigint NOT NULL,\
                 terminated bigint NOT NULL,\
                 faults bigint NOT NULL,\
@@ -144,6 +146,8 @@ class Migrations {
             epoch bigint NOT NULL UNIQUE,\
             commited bigint NOT NULL,\
             used bigint NOT NULL,\
+            total bigint NOT NULL,\
+            fraction NUMERIC(5,5) NOT NULL,\
             PRIMARY KEY (epoch) \
         )");
 

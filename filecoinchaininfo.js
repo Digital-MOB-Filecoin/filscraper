@@ -118,7 +118,8 @@ class FilecoinChainInfo {
             if (!new_messages) {
                 new_messages = [];
             }
-            new_messages = new_messages.map((msg, r) => ({ ...msg.Message, cid: msg.Cid, receipt: receipts[r], block: block }));
+
+            new_messages = new_messages.map((msg, r) => ({ ...msg.Message, ExitCode: receipts[r].ExitCode, Return: receipts[r].Return, GasUsed: receipts[r].GasUsed, Block: block }));
             messages = [...messages, ...new_messages];
 
         } catch (e) {
