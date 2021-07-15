@@ -161,9 +161,24 @@ class Migrations {
         DROP TABLE IF EXISTS fil_network CASCADE;\
         DROP TABLE IF EXISTS fil_miner_events CASCADE;\
         DROP TABLE IF EXISTS fil_deals CASCADE;\
+        DROP TABLE IF EXISTS fil_sectors CASCADE;\
         DROP TABLE IF EXISTS fil_sector_events CASCADE;\
         DROP TABLE IF EXISTS fil_bad_blocks CASCADE;\
         DROP TABLE IF EXISTS fil_blocks CASCADE;\
+        ");
+
+        client.release()
+    }
+
+    async create_indexes() {
+        const client = await this.pool.connect();
+
+        await client.query("\
+        CREATE INDEX IF NOT EXISTS idx_fil_messages ON fil_messages(\"Block\");\
+        CREATE INDEX IF NOT EXISTS idx_fil_network ON fil_network(epoch);\
+        CREATE INDEX IF NOT EXISTS idx_fil_miner_events ON fil_miner_events(epoch);\
+        CREATE INDEX IF NOT EXISTS idx_fil_bad_blocks ON fil_bad_blocks(block);\
+        CREATE INDEX IF NOT EXISTS idx_fil_blocks ON fil_blocks(block);\
         ");
 
         client.release()
@@ -178,6 +193,7 @@ class Migrations {
         await this.create_fildeals_table();
         await this.create_filminerevents_table();
         await this.create_filnetwork_table();
+        await this.create_indexes();
     }
 }
 
