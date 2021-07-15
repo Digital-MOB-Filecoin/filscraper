@@ -1,7 +1,8 @@
 module.exports = {
     scraper: {
       start: process.env.SCRAPER_START || 0,
-      api_port: process.env.SCRAPER_API_PORT || 3000
+      api_port: process.env.SCRAPER_API_PORT || 3000,
+      reprocess: process.env.SCRAPER_REPROCESS || 0
     },
     database: {
         user: process.env.DB_USER || '',

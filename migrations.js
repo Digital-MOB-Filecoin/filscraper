@@ -125,7 +125,7 @@ class Migrations {
                 commited bigint NOT NULL,\
                 used bigint NOT NULL,\
                 total bigint NOT NULL,\
-                fraction NUMERIC(5,5) NOT NULL,\
+                fraction NUMERIC(6,5) NOT NULL,\
                 activated bigint NOT NULL,\
                 terminated bigint NOT NULL,\
                 faults bigint NOT NULL,\
@@ -150,6 +150,21 @@ class Migrations {
             fraction NUMERIC(5,5) NOT NULL,\
             PRIMARY KEY (epoch) \
         )");
+
+        client.release()
+    }
+
+    async reprocess() {
+        const client = await this.pool.connect();
+
+        await client.query("\
+        DROP TABLE IF EXISTS fil_network CASCADE;\
+        DROP TABLE IF EXISTS fil_miner_events CASCADE;\
+        DROP TABLE IF EXISTS fil_deals CASCADE;\
+        DROP TABLE IF EXISTS fil_sector_events CASCADE;\
+        DROP TABLE IF EXISTS fil_bad_blocks CASCADE;\
+        DROP TABLE IF EXISTS fil_blocks CASCADE;\
+        ");
 
         client.release()
     }

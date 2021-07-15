@@ -240,8 +240,6 @@ async function process_messages(block, messages) {
         fraction = fraction.div(new Big(total.toString(10)));
     }
 
-    console.log(fraction.toPrecision(5));
-
     let network_info = {
         epoch: block, 
         used: used, 
@@ -372,6 +370,11 @@ const pause = (timeout) => new Promise(res => setTimeout(res, timeout * 1000));
 
 const mainLoop = async _ => {
     try {
+        if (config.scraper.reprocess == 1) {
+            WARNING('Reprocess');
+            await migrations.reprocess();
+        }
+
         await migrations.run();
 
         while (!stop) {

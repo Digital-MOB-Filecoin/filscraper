@@ -204,9 +204,7 @@ class DB {
 
 
         } catch (err) {
-            WARNING(`[
-                
-            ] ${err}`)
+            WARNING(`[SaveMinerEvents] ${err}`)
         }
         client.release()
     }
