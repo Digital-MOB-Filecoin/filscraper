@@ -5,6 +5,7 @@ const Big = require('big.js');
 const { version } = require('./package.json');
 const { INFO, ERROR, WARNING } = require('./logs');
 const { FilecoinChainInfo } = require('./filecoinchaininfo');
+const { Lotus } = require('./lotus');
 const { Migrations } = require('./migrations');
 const { DB } = require('./db');
 const { MinerMethods } = require('./miner-methods');
@@ -16,6 +17,7 @@ const RESCRAPE_INTERVAL = 1 // hours
 let last_rescrape = Date.now();
 
 let filecoinChainInfo = new FilecoinChainInfo(config.lotus.api, config.lotus.token);
+let lotus = new Lotus(config.lotus.api, config.lotus.token);
 let migrations = new Migrations();
 let db = new DB();
 let stop = false;
@@ -57,6 +59,27 @@ function get_miner_events(miner_events, miner, epoch) {
     return miner_event;
 }
 
+async function get_sector_size(miner) {
+    let sector_size = await db.get_sector_size(miner);
+
+    if (!sector_size) {
+        const minerInfo = await lotus.StateMinerInfo(miner);
+
+        if (minerInfo?.data?.result?.SectorSize) {
+            let sectorSize = minerInfo?.data.result.SectorSize;
+            sector_size = sectorSize;
+            await db.save_sector_size(miner, sector_size);
+
+            INFO(`[GetSectorSize] miner: ${miner} -> ${sector_size}`);
+        } else {
+            ERROR(`[GetSectorSize] miner: ${miner} lotus.StateMinerInfo:  ${JSON.stringify(minerInfo?.data)}`);
+            sector_size = 34359738368;
+        }
+    }
+
+    return sector_size;
+}
+
 async function process_messages(block, messages) {
     let miner_events = new Map();
     var messagesSlice = messages;
@@ -91,10 +114,7 @@ async function process_messages(block, messages) {
                                 SectorNumber: decoded_params[1]
                             }
 
-                            //const minerInfo = await lotus.StateMinerInfo(miner.address);
-                            //let sectorSize = minerInfo.result.SectorSize;
-                            //TODO: sector size cache[miner]
-                            const sector_size = 34359738368;
+                            const sector_size = await get_sector_size(miner);
 
                             let sector_info = {
                                 sector: preCommitSector.SectorNumber,
@@ -113,14 +133,6 @@ async function process_messages(block, messages) {
                                 miner_event.activated++;
                                 miner_event.commited = miner_event.commited.add(new BN(sector_size));
                                 miner_events.set(miner, miner_event);
-
-                                // 'miners' TABLE -> lotus.StateMinerInfo
-                                // miner
-                                // sector_size
-
-
-
-
                             } else {
                                 //used sector
                                 sector_info.type = 'used';
@@ -375,6 +387,7 @@ const mainLoop = async _ => {
             await migrations.reprocess();
         }
 
+        INFO('Run migrations');
         await migrations.run();
 
         while (!stop) {

@@ -236,6 +236,38 @@ class DB {
         }
         client.release()
     }
+
+    async get_sector_size(miner) {
+        const client = await this.pool.connect();
+        let sector_size = undefined;
+        try {
+            const result = await client.query(`\
+        SELECT sector_size FROM fil_miners WHERE miner = \'${miner}\' LIMIT 1;`);
+
+            if (result?.rows) {
+                sector_size = result?.rows[0]?.sector_size;
+            }
+        } catch (err) {
+            WARNING(`[GetSectorSize] ${err}`)
+        }
+        client.release()
+
+        return sector_size;
+    }
+
+    async save_sector_size(miner, sector_size) {
+        const client = await this.pool.connect();
+        try {
+            await client.query(`\
+           INSERT INTO fil_miners (miner, sector_size) \
+           VALUES ('${miner}', '${sector_size}') `);
+
+
+        } catch (err) {
+            WARNING(`[SaveSectorSize] ${err}`)
+        }
+        client.release()
+    }
 }
 
 module.exports = {

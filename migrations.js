@@ -112,9 +112,6 @@ class Migrations {
         client.release()
     }
 
-
-
-    //PRIMARY (miner,epoch)
     async create_filminerevents_table() {
         const client = await this.pool.connect();
 
@@ -154,6 +151,19 @@ class Migrations {
         client.release()
     }
 
+    async create_filminers_table() {
+        const client = await this.pool.connect();
+
+        await client.query("\
+            CREATE TABLE IF NOT EXISTS fil_miners\
+            (\
+                miner text NOT NULL UNIQUE,\
+                sector_size bigint NOT NULL\
+            )");
+
+        client.release()
+    }
+
     async reprocess() {
         const client = await this.pool.connect();
 
@@ -179,6 +189,7 @@ class Migrations {
         CREATE INDEX IF NOT EXISTS idx_fil_miner_events ON fil_miner_events(epoch);\
         CREATE INDEX IF NOT EXISTS idx_fil_bad_blocks ON fil_bad_blocks(block);\
         CREATE INDEX IF NOT EXISTS idx_fil_blocks ON fil_blocks(block);\
+        CREATE INDEX IF NOT EXISTS idx_fil_miners ON fil_miners(miner);\
         ");
 
         client.release()
@@ -193,6 +204,7 @@ class Migrations {
         await this.create_fildeals_table();
         await this.create_filminerevents_table();
         await this.create_filnetwork_table();
+        await this.create_filminers_table();
         await this.create_indexes();
     }
 }
