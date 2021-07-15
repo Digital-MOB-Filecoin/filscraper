@@ -154,30 +154,6 @@ class Migrations {
         client.release()
     }
 
-    async rename_fil_messages_columns() {
-        const client = await this.pool.connect();
-
-        await client.query("\
-    ALTER TABLE fil_messages RENAME COLUMN CID TO \"CID\";\
-    ALTER TABLE fil_messages RENAME COLUMN Block TO \"Block\";\
-    ALTER TABLE fil_messages RENAME COLUMN \"from\" TO \"From\";\
-    ALTER TABLE fil_messages RENAME COLUMN \"to\" TO \"To\";\
-    ALTER TABLE fil_messages RENAME COLUMN Nonce TO \"Nonce\";\
-    ALTER TABLE fil_messages RENAME COLUMN Value TO \"Value\";\
-    ALTER TABLE fil_messages RENAME COLUMN GasLimit TO \"GasLimit\";\
-    ALTER TABLE fil_messages RENAME COLUMN GasFeeCap TO \"GasFeeCap\";\
-    ALTER TABLE fil_messages RENAME COLUMN GasPremium TO \"GasPremium\";\
-    ALTER TABLE fil_messages RENAME COLUMN Method TO \"Method\";\
-    ALTER TABLE fil_messages RENAME COLUMN Params TO \"Params\";\
-    ALTER TABLE fil_messages RENAME COLUMN ExitCode TO \"ExitCode\";\
-    ALTER TABLE fil_messages RENAME COLUMN Return TO \"Return\";\
-    ALTER TABLE fil_messages RENAME COLUMN GasUsed TO \"GasUsed\";\
-    ALTER TABLE fil_messages RENAME COLUMN Version TO \"Version\";\
-    ");
-
-        client.release()
-    }
-
     async reprocess() {
         const client = await this.pool.connect();
 
@@ -202,7 +178,6 @@ class Migrations {
         await this.create_fildeals_table();
         await this.create_filminerevents_table();
         await this.create_filnetwork_table();
-        await this.rename_fil_messages_columns();
     }
 }
 
