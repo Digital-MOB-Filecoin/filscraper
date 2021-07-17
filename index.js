@@ -359,18 +359,20 @@ async function rescrape() {
     do {
         blocks = await db.get_bad_blocks(SCRAPE_LIMIT, i * SCRAPE_LIMIT);
 
-        await Promise.all(blocks.map(async (block) => {
-            try {
-                await scrape_block(block.block);
-            } catch (error) {
-                ERROR(`[Rescrape] error :`);
-                console.error(error);
-            }
-        }));
+        if (blocks) {
+            await Promise.all(blocks.map(async (block) => {
+                try {
+                    await scrape_block(block.block);
+                } catch (error) {
+                    ERROR(`[Rescrape] error :`);
+                    console.error(error);
+                }
+            }));
+        }
 
         i++;
 
-    } while (blocks?.length == SCRAPE_LIMIT);
+    } while (blocks && blocks?.length == SCRAPE_LIMIT);
 }
 
 
