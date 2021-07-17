@@ -405,7 +405,7 @@ const mainLoop = async _ => {
 
         setInterval(async () => {
             await refresh_views();
-        }, 3600 * 1000); // refresh every hour
+        }, 12 * 3600 * 1000); // refresh every 12 hours
 
         while (!stop) {
 
