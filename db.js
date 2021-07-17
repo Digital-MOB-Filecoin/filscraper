@@ -53,7 +53,7 @@ class DB {
 
 
         } catch (err) {
-            WARNING(`[SaveBlock] ${err?.detail}`)
+            WARNING(`[SaveBlock] ${err}`)
         }
         client.release()
     }
@@ -67,7 +67,7 @@ class DB {
 
 
         } catch (err) {
-            WARNING(`[SaveBadBlock] ${err?.detail}`)
+            WARNING(`[SaveBadBlock] ${err}`)
         }
         client.release()
     }
@@ -84,7 +84,7 @@ class DB {
                 block = result?.rows[0]?.max;
             }
         } catch (err) {
-            WARNING(`[GetMaxBlock] ${err?.detail}`)
+            WARNING(`[GetMaxBlock] ${err}`)
         }
         client.release()
 
@@ -102,7 +102,7 @@ class DB {
                 rows = result?.rows;
             }
         } catch (err) {
-            WARNING(`[GetBadBlocks] ${err?.detail}`)
+            WARNING(`[GetBadBlocks] ${err}`)
         }
         client.release()
 
