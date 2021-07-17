@@ -268,6 +268,57 @@ class DB {
         }
         client.release()
     }
+    async refresh_network_view_epochs() {
+        const client = await this.pool.connect();
+        try {
+            await client.query("\
+            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_network_view_epochs WITH DATA;\
+            ");
+
+        } catch (err) {
+            WARNING(`[RefreshNetworkMatViewEpochs] ${err}`)
+        }
+        client.release();
+    }
+
+    async refresh_network_view_days() {
+        const client = await this.pool.connect();
+        try {
+            await client.query("\
+            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_network_view_days WITH DATA;\
+            ");
+
+        } catch (err) {
+            WARNING(`[RefreshNetworkMatViewDays] ${err}`)
+        }
+        client.release();
+    }
+
+    async refresh_miner_view_epochs() {
+        const client = await this.pool.connect();
+        try {
+            await client.query("\
+            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_epochs WITH DATA;\
+            ");
+
+        } catch (err) {
+            WARNING(`[RefreshMinerMatViewEpochs] ${err}`)
+        }
+        client.release();
+    }
+
+    async refresh_miner_view_days() {
+        const client = await this.pool.connect();
+        try {
+            await client.query("\
+            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_days WITH DATA;\
+            ");
+
+        } catch (err) {
+            WARNING(`[RefreshMinerMatViewDays] ${err}`)
+        }
+        client.release();
+    }
 }
 
 module.exports = {

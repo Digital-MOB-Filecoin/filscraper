@@ -380,6 +380,15 @@ async function filscraper_version() {
 
 const pause = (timeout) => new Promise(res => setTimeout(res, timeout * 1000));
 
+async function refresh_views() {
+    INFO('Refresh Views');
+    await db.refresh_network_view_epochs();
+    await db.refresh_network_view_days();
+    await db.refresh_miner_view_epochs();
+    await db.refresh_miner_view_days();
+    INFO('Refresh Views, done');
+}
+
 const mainLoop = async _ => {
     try {
         if (config.scraper.reprocess == 1) {
@@ -389,6 +398,12 @@ const mainLoop = async _ => {
 
         INFO('Run migrations');
         await migrations.run();
+
+        await refresh_views();
+
+        setInterval(async () => {
+            await refresh_views();
+        }, 3600 * 1000); // refresh every hour
 
         while (!stop) {
 

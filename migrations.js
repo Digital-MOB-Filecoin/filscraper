@@ -192,7 +192,119 @@ class Migrations {
         CREATE INDEX IF NOT EXISTS idx_fil_miners ON fil_miners(miner);\
         ");
 
-        client.release()
+        client.release();
+    }
+
+    async create_network_view_epochs() {
+        const client = await this.pool.connect();
+
+        await client.query("\
+        CREATE MATERIALIZED VIEW IF NOT EXISTS fil_network_view_epochs\
+        AS\
+        select epoch,\
+            commited as commited_per_epoch,\
+            used as used_per_epoch,\
+            fraction as fraction_per_epoch,\
+            (total / 1073741824) as total_per_epoch,\
+            SUM(SUM(commited / 1073741824)) OVER(ORDER BY epoch) AS commited,\
+            SUM(SUM(used / 1073741824)) OVER(ORDER BY epoch) AS used,\
+            SUM(SUM(total / 1073741824)) OVER (ORDER BY epoch) AS total,\
+            to_timestamp(1598281200 + epoch * 30) as timestamp\
+        from fil_network GROUP BY epoch order by epoch\
+        WITH DATA;\
+        ");
+
+        await client.query("CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_network_view_epochs ON fil_network_view_epochs(epoch)");
+
+        client.release();
+    }
+
+    async create_network_view_days() {
+        const client = await this.pool.connect();
+
+        await client.query("\
+        CREATE MATERIALIZED VIEW IF NOT EXISTS fil_network_view_days\
+        AS\
+        SELECT\
+            commited,\
+            used,\
+            total,\
+            (used / total) AS fraction,\
+            avg_total_per_epoch,\
+            date::date AS date\
+            FROM(\
+                SELECT \
+                    ROUND(AVG(commited))               AS commited,\
+                    ROUND(AVG(used))                   AS used,\
+                    ROUND(AVG(total))                  AS total,\
+                    ROUND(AVG(total_per_epoch))        AS avg_total_per_epoch,\
+                    date_trunc('day', timestamp)       AS date\
+                FROM fil_network_view_epochs\
+                GROUP BY date\
+                ORDER BY date\
+            ) q WITH DATA;\
+        ");
+
+        await client.query("CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_network_view_days ON fil_network_view_days(date)");
+
+        client.release();
+    }
+
+    async create_miner_view_epochs() {
+        const client = await this.pool.connect();
+
+        await client.query("\
+        CREATE MATERIALIZED VIEW IF NOT EXISTS fil_miner_view_epochs\
+        AS \
+        select epoch,\
+               miner,\
+               commited as commited_per_epoch,\
+               used as used_per_epoch,\
+               fraction as fraction_per_epoch,\
+               ((commited + used) / 1073741824) as total_per_epoch,\
+               SUM(SUM(commited / 1073741824)) OVER (PARTITION BY miner ORDER BY epoch) AS commited,\
+               SUM(SUM(used / 1073741824)) OVER (PARTITION BY miner ORDER BY epoch) AS used,\
+               SUM(SUM(total / 1073741824)) OVER (PARTITION BY miner ORDER BY epoch) AS total,\
+               to_timestamp(1598281200 + epoch * 30) as timestamp\
+        from fil_miner_events GROUP BY miner,commited,used,fraction,epoch,total order by epoch\
+        WITH DATA;\
+        ");
+
+        await client.query("CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_miner_view_epochs ON fil_miner_view_epochs(miner,epoch)");
+
+        client.release();
+    }
+
+    async create_miner_view_days() {
+        const client = await this.pool.connect();
+
+        await client.query("\
+            CREATE MATERIALIZED VIEW IF NOT EXISTS fil_miner_view_days\
+            AS\
+            SELECT\
+                miner,\
+                commited,\
+                used,\
+                total,\
+                (used / total) AS fraction,\
+                avg_total_per_epoch,\
+                date::date AS date\
+            FROM (\
+                SELECT\
+                    miner,\
+                    ROUND(AVG(commited))                            AS commited,\
+                    ROUND(AVG(used))                                AS used,\
+                    ROUND(AVG(total))                               AS total,\
+                    ROUND(AVG(total_per_epoch))                     AS avg_total_per_epoch,\
+                    date_trunc('day', timestamp) AS date\
+                FROM fil_miner_view_epochs\
+                GROUP BY miner,date\
+                ORDER BY date\
+                ) q WHERE total > 0\
+            WITH DATA;\
+        ");
+
+        await client.query("CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_miner_view_days ON fil_miner_view_days(miner,date)");
     }
 
     async run() {
@@ -206,6 +318,10 @@ class Migrations {
         await this.create_filnetwork_table();
         await this.create_filminers_table();
         await this.create_indexes();
+        await this.create_network_view_epochs();
+        await this.create_network_view_days();
+        await this.create_miner_view_epochs();
+        await this.create_miner_view_days();
     }
 }
 
