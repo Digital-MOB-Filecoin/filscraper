@@ -321,7 +321,7 @@ async function scrape() {
     let start_block = await db.get_start_block();
     const end_block = chainHead - 1;
 
-    if (start_block < config.scraper.start) {
+    if (start_block > config.scraper.start) {
         start_block = config.scraper.start;
     }
 
