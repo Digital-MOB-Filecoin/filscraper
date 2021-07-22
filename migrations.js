@@ -242,7 +242,8 @@ class Migrations {
                 FROM fil_network_view_epochs\
                 GROUP BY date\
                 ORDER BY date\
-            ) q WITH DATA;\
+            ) q WHERE total > 0\
+            WITH DATA;\
         ");
 
         await client.query("CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_network_view_days ON fil_network_view_days(date)");
