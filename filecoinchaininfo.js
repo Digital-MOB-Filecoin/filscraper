@@ -13,7 +13,7 @@ class FilecoinChainInfo {
     async GetMessages(startBlock, endBlock, onMessagesCallback, onErrorCallback) {
         const chainHead = await this.lotus.ChainHead();
         if (chainHead.status != 200) {
-            onErrorCallback(`hainHead.status : ${hainHead.status} , statusText: ${hainHead.statusText}`);
+            onErrorCallback(`chainHead.status : ${chainHead.status} , statusText: ${chainHead.statusText}`);
             return [];
         }
 

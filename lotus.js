@@ -10,7 +10,7 @@ class Lotus {
         this.token = token;
     }
 
-    async LotusAPI(method, params, timeout = 180000) {
+    async LotusAPI(method, params, timeout = 300000) {
         let body = JSON.stringify({
             "jsonrpc": "2.0",
             "method": `Filecoin.${method}`,
