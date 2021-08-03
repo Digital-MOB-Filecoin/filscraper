@@ -180,6 +180,17 @@ class Migrations {
         client.release()
     }
 
+    async reprocess_day_views() {
+        const client = await this.pool.connect();
+
+        await client.query("\
+        DROP MATERIALIZED VIEW IF EXISTS fil_network_view_days CASCADE;\
+        DROP MATERIALIZED VIEW IF EXISTS fil_miner_view_days CASCADE;\
+        ");
+
+        client.release()
+    }
+
     async create_indexes() {
         const client = await this.pool.connect();
 
@@ -230,14 +241,14 @@ class Migrations {
             used,\
             total,\
             (used / total) AS fraction,\
-            avg_total_per_epoch,\
+            total_per_day,\
             date::date AS date\
             FROM(\
                 SELECT \
                     ROUND(AVG(commited))               AS commited,\
                     ROUND(AVG(used))                   AS used,\
                     ROUND(AVG(total))                  AS total,\
-                    ROUND(AVG(total_per_epoch))        AS avg_total_per_epoch,\
+                    ROUND(SUM(total_per_epoch))        AS total_per_day,\
                     date_trunc('day', timestamp)       AS date\
                 FROM fil_network_view_epochs\
                 GROUP BY date\
@@ -288,7 +299,7 @@ class Migrations {
                 used,\
                 total,\
                 (used / total) AS fraction,\
-                avg_total_per_epoch,\
+                total_per_day,\
                 date::date AS date\
             FROM (\
                 SELECT\
@@ -296,7 +307,7 @@ class Migrations {
                     ROUND(AVG(commited))                            AS commited,\
                     ROUND(AVG(used))                                AS used,\
                     ROUND(AVG(total))                               AS total,\
-                    ROUND(AVG(total_per_epoch))                     AS avg_total_per_epoch,\
+                    ROUND(SUM(total_per_epoch))                     AS total_per_day,\
                     date_trunc('day', timestamp) AS date\
                 FROM fil_miner_view_epochs\
                 GROUP BY miner,date\
