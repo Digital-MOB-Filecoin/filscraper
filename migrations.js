@@ -196,6 +196,10 @@ class Migrations {
 
         await client.query("\
         CREATE INDEX IF NOT EXISTS idx_fil_messages ON fil_messages(\"Block\");\
+        CREATE INDEX IF NOT EXISTS idx_fil_messages_CID ON fil_messages(\"CID\");\
+        CREATE INDEX IF NOT EXISTS idx_fil_messages_From ON fil_messages(\"From\");\
+        CREATE INDEX IF NOT EXISTS idx_fil_messages_To ON fil_messages(\"To\");\
+        CREATE INDEX IF NOT EXISTS idx_fil_messages_Method ON fil_messages(\"Method\");\
         CREATE INDEX IF NOT EXISTS idx_fil_network ON fil_network(epoch);\
         CREATE INDEX IF NOT EXISTS idx_fil_miner_events ON fil_miner_events(epoch);\
         CREATE INDEX IF NOT EXISTS idx_fil_bad_blocks ON fil_bad_blocks(block);\
