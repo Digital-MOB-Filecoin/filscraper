@@ -421,10 +421,9 @@ const mainLoop = async _ => {
 
         INFO('Run migrations');
         await migrations.run();
-        INFO('Run migrations: done');
+        INFO('Run migrations, done');
 
-        //TODO : run refresh_views at startup
-        //await refresh_views();
+        await refresh_views();
 
         setInterval(async () => {
             await refresh_views();
