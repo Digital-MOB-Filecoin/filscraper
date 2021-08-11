@@ -276,11 +276,11 @@ async function process_messages(block, messages) {
     });
 }
 
-async function scrape_block(block) {
+async function scrape_block(block, msg) {
     let scraped_from_db = false;
     const found = await db.have_block(block);
     if (found) {
-        INFO(`[ScrapeBlock] ${block} already scraped, skipping`);
+        INFO(`[${msg}] ${block} already scraped, skipping`);
         return;
     }
 
@@ -288,26 +288,26 @@ async function scrape_block(block) {
 
     const found_messages = await db.have_messages(block);
     if (found_messages) {
-        INFO(`[ScrapeBlock] ${block} from db`);
+        INFO(`[${msg}] ${block} from db`);
         messages = await db.get_messages(block);
         scraped_from_db = true;
     } else {
-        INFO(`[ScrapeBlock] ${block}`);
+        INFO(`[${msg}] ${block}`);
         messages = await filecoinChainInfo.GetBlockMessages(block);
     }
 
     if (messages && messages.length > 0) {
-        INFO(`[ScrapeBlock] ${block}, ${messages.length} messages`);
+        INFO(`[${msg}] ${block}, ${messages.length} messages`);
         await db.save_block(block, messages.length);
         if (!scraped_from_db) {
             await db.save_messages(messages);
         }
         await process_messages(block, messages);
 
-        INFO(`[ScrapeBlock] ${block} done`);
+        INFO(`[${msg}] ${block} done`);
     } else {
         await db.save_bad_block(block)
-        WARNING(`[ScrapeBlock] ${block} mark as bad block`);
+        WARNING(`[${msg}] ${block} mark as bad block`);
     }
 }
 
@@ -336,7 +336,7 @@ async function scrape() {
     while (blocksSlice.length) {
         await Promise.all(blocksSlice.splice(0, SCRAPE_LIMIT).map(async (block) => {
             try {
-                await scrape_block(block);
+                await scrape_block(block,'ScrapeBlock');
             } catch (error) {
                 ERROR(`[Scrape] error :`);
                 console.error(error);
@@ -362,7 +362,7 @@ async function rescrape() {
         if (blocks) {
             await Promise.all(blocks.map(async (block) => {
                 try {
-                    await scrape_block(block.block);
+                    await scrape_block(block.block, 'RescrapeBadBlock');
                 } catch (error) {
                     ERROR(`[Rescrape] error :`);
                     console.error(error);
@@ -373,6 +373,25 @@ async function rescrape() {
         i++;
 
     } while (blocks && blocks?.length == SCRAPE_LIMIT);
+}
+
+async function rescrape_missing_blocks() {
+    let head = await db.get_start_block();
+    let missing_blocks = await db.get_missing_blocks(head);
+
+    INFO(`[RescrapeMissingBlocks] total missing blocks: ${missing_blocks.length}`);
+
+    var blocksSlice = missing_blocks;
+    while (blocksSlice.length) {
+        await Promise.all(blocksSlice.splice(0, SCRAPE_LIMIT).map(async (item) => {
+            try {
+                await scrape_block(item.missing_block,'RescrapeMissingBlock');
+            } catch (error) {
+                ERROR(`[RescrapeMissingBlocks] error :`);
+                console.error(error);
+            }
+        }));
+    }
 }
 
 
@@ -413,7 +432,7 @@ const mainLoop = async _ => {
         }, 12 * 3600 * 1000); // refresh every 12 hours
 
         while (!stop) {
-
+            await rescrape_missing_blocks();
             await scrape();
             await rescrape();
 

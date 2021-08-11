@@ -268,6 +268,7 @@ class DB {
         }
         client.release()
     }
+
     async refresh_network_view_epochs() {
         const client = await this.pool.connect();
         try {
@@ -319,6 +320,26 @@ class DB {
         }
         client.release();
     }
+
+    async get_missing_blocks(head) {
+        const client = await this.pool.connect();
+        let missing_blocks = undefined;
+        try {
+            const result = await client.query(`\
+            SELECT s.i AS missing_block \
+            FROM generate_series(0,${head}) s(i) \
+            WHERE NOT EXISTS (SELECT 1 FROM fil_blocks WHERE block = s.i); `);
+
+            if (result?.rows) {
+                missing_blocks = result?.rows;
+            }
+        } catch (err) {
+            WARNING(`[GetMissingBlocks] ${err}`)
+        }
+        client.release();
+
+        return missing_blocks;
+    } 
 }
 
 module.exports = {
