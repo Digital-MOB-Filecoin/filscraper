@@ -372,9 +372,10 @@ async function rescrape() {
 }
 
 async function rescrape_missing_blocks() {
+    INFO(`[RescrapeMissingBlocks]`);
     let head = await db.get_start_block();
+    INFO(`[RescrapeMissingBlocks] from [0,${head}]`);
     let missing_blocks = await db.get_missing_blocks(head);
-
     INFO(`[RescrapeMissingBlocks] total missing blocks: ${missing_blocks.length}`);
 
     var blocksSlice = missing_blocks;
@@ -420,6 +421,7 @@ const mainLoop = async _ => {
 
         INFO('Run migrations');
         await migrations.run();
+        INFO('Run migrations: done');
 
         //TODO : run refresh_views at startup
         //await refresh_views();
