@@ -1,6 +1,6 @@
 {
   "name": "filscraper",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "description": "Filscraper",
   "main": "index.js",
   "scripts": {
@@ -27,6 +27,7 @@
     "env-cmd": "^10.1.0",
     "express": "^4.17.1",
     "pg": "^8.6.0",
+    "postgres-migrations": "^5.3.0",
     "save": "^2.4.0",
     "time-stamp": "^2.2.0"
   }

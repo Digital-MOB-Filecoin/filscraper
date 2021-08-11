@@ -414,16 +414,11 @@ const mainLoop = async _ => {
             await migrations.reprocess();
         }
 
-        if (config.scraper.reprocess_day_views == 1) {
-            WARNING('Reprocess day views');
-            await migrations.reprocess_day_views();
-        }
-
         INFO('Run migrations');
         await migrations.run();
         INFO('Run migrations, done');
 
-        await refresh_views();
+        refresh_views();
 
         setInterval(async () => {
             await refresh_views();
