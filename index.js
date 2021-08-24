@@ -17,7 +17,8 @@ const RESCRAPE_INTERVAL = 1 // hours
 let last_rescrape = Date.now();
 
 let filecoinChainInfo = new FilecoinChainInfo(config.lotus.api, config.lotus.token);
-let lotus = new Lotus(config.lotus.api, config.lotus.token);
+let filecoinChainInfoInfura = new FilecoinChainInfo(config.lotus.api_infura, 'token');
+let lotus_infura = new Lotus(config.lotus.api_infura, 'token');
 let migrations = new Migrations();
 let db = new DB();
 let stop = false;
@@ -63,7 +64,7 @@ async function get_sector_size(miner) {
     let sector_size = await db.get_sector_size(miner);
 
     if (!sector_size) {
-        const minerInfo = await lotus.StateMinerInfo(miner);
+        const minerInfo = await lotus_infura.StateMinerInfo(miner);
 
         if (minerInfo?.data?.result?.SectorSize) {
             let sectorSize = minerInfo?.data.result.SectorSize;
@@ -276,10 +277,11 @@ async function process_messages(block, messages) {
     });
 }
 
-async function scrape_block(block, msg) {
+async function scrape_block(block, msg, rescrape = false) {
     let scraped_from_db = false;
     const found = await db.have_block(block);
     if (found) {
+        //TODO: delete bad block mark if exists
         INFO(`[${msg}] ${block} already scraped, skipping`);
         return;
     }
@@ -293,7 +295,11 @@ async function scrape_block(block, msg) {
         scraped_from_db = true;
     } else {
         INFO(`[${msg}] ${block}`);
-        messages = await filecoinChainInfo.GetBlockMessages(block);
+        if (rescrape) {
+            messages = await filecoinChainInfo.GetBlockMessages(block);
+        } else {
+            messages = await filecoinChainInfoInfura.GetBlockMessages(block);
+        }
     }
 
     if (messages && messages.length > 0) {
@@ -358,7 +364,7 @@ async function rescrape() {
         if (blocks) {
             await Promise.all(blocks.map(async (block) => {
                 try {
-                    await scrape_block(block.block, 'RescrapeBadBlock');
+                    await scrape_block(block.block, 'RescrapeBadBlock', true);
                 } catch (error) {
                     ERROR(`[Rescrape] error :`);
                     console.error(error);

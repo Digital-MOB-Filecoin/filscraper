@@ -12,6 +12,7 @@ module.exports = {
         port: process.env.DB_PORT || 5432
       },
     lotus: {
+      api_infura: process.env.LOTUS_API_INFURA || '',
       api: process.env.LOTUS_API || '',
       token: process.env.LOTUS_TOKEN || ''
     }
