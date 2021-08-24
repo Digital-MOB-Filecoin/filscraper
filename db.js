@@ -328,7 +328,8 @@ class DB {
             const result = await client.query(`\
             SELECT s.i AS missing_block \
             FROM generate_series(0,${head}) s(i) \
-            WHERE NOT EXISTS (SELECT 1 FROM fil_blocks WHERE block = s.i); `);
+            WHERE (NOT EXISTS (SELECT 1 FROM fil_blocks WHERE block = s.i)) AND \
+            (NOT EXISTS (SELECT 1 FROM fil_bad_blocks WHERE block = s.i)); `);
 
             if (result?.rows) {
                 missing_blocks = result?.rows;
