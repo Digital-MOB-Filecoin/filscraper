@@ -321,6 +321,19 @@ class DB {
         client.release();
     }
 
+    async refresh_miners_view() {
+        const client = await this.pool.connect();
+        try {
+            await client.query("\
+            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_view WITH DATA;\
+            ");
+
+        } catch (err) {
+            WARNING(`[RefreshMinersMatView] ${err}`)
+        }
+        client.release();
+    }
+
     async get_missing_blocks(head) {
         const client = await this.pool.connect();
         let missing_blocks = undefined;

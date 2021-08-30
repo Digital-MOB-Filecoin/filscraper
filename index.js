@@ -410,6 +410,7 @@ async function refresh_views() {
     await db.refresh_network_view_days();
     await db.refresh_miner_view_epochs();
     await db.refresh_miner_view_days();
+    await db.refresh_miners_view();
     INFO('Refresh Views, done');
 }
 
