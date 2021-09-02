@@ -119,7 +119,7 @@ class FilecoinChainInfo {
                 new_messages = [];
             }
 
-            new_messages = new_messages.map((msg, r) => ({ ...msg.Message, ExitCode: receipts[r].ExitCode, Return: receipts[r].Return, GasUsed: receipts[r].GasUsed, Block: block }));
+            new_messages = new_messages.map((msg, r) => ({ Cid: msg.Cid, ...msg.Message, ExitCode: receipts[r].ExitCode, Return: receipts[r].Return, GasUsed: receipts[r].GasUsed, Block: block }));
             messages = [...messages, ...new_messages];
 
         } catch (e) {
@@ -128,6 +128,71 @@ class FilecoinChainInfo {
 
         return messages;
     }
+
+    async GetTipSetKey(block) {
+        const chainHeadResponse = await this.lotus.ChainHead();
+
+        if (!this.CheckResponse('ChainHead', chainHeadResponse)) {
+            return undefined
+        }
+
+        var tipSetResponse = await this.lotus.ChainGetTipSetByHeight(block, chainHeadResponse.data.result.Cids);
+        if (!this.CheckResponse('ChainGetTipSetByHeight', tipSetResponse)) {
+            return undefined
+        }
+
+        return tipSetResponse.data.result.Cids;
+    }
+
+    async GetBlockMessagesByTipSet(block, tipSetKey) {
+        let messages = [];
+        let new_tipSetKey = undefined;
+
+        try {
+            if (!tipSetKey) {
+                const chainHeadResponse = await this.lotus.ChainHead();
+                tipSetKey = chainHeadResponse.data.result.Cids;
+
+                if (!this.CheckResponse('ChainHead', chainHeadResponse)) {
+                    return undefined
+                }
+            }
+
+            var tipSetResponse = await this.lotus.ChainGetTipSetByHeight(block + 1, tipSetKey);
+            if (!this.CheckResponse('ChainGetTipSetByHeight', tipSetResponse)) {
+                return undefined
+            }
+
+            new_tipSetKey = tipSetResponse.data.result.Blocks[0].Parents;
+
+            const { '/': blockCid } = tipSetResponse.data.result.Cids[0];
+            const parentMessagesResponse = await this.lotus.ChainGetParentMessages(blockCid);
+            if (!this.CheckResponse('ChainGetParentMessages', parentMessagesResponse)) {
+                return undefined
+            }
+
+            let new_messages = parentMessagesResponse.data.result;
+            const receiptsResponse = await this.lotus.ChainGetParentReceipts(blockCid)
+            if (!this.CheckResponse('ChainGetParentReceipts', receiptsResponse)) {
+                return undefined
+            }
+
+            let receipts = receiptsResponse.data.result;
+
+            if (!new_messages) {
+                new_messages = [];
+            }
+
+            new_messages = new_messages.map((msg, r) => ({ Cid: msg.Cid, ...msg.Message, ExitCode: receipts[r].ExitCode, Return: receipts[r].Return, GasUsed: receipts[r].GasUsed, Block: block }));
+            messages = [...messages, ...new_messages];
+
+        } catch (e) {
+            ERROR(`[GetBlockMessagesByTipSet] ${e.message}`);
+        }
+
+        return {tipSetKey: new_tipSetKey, messages: messages};;
+    }
+
 }
 
 module.exports = {

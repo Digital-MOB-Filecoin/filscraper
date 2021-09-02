@@ -15,9 +15,10 @@ class DB {
             const msg = msgs[i];
             try {
                 const { '/': msgCid } = msg.CID;
+                const { '/': msgCid2 } = msg.Cid;
 
                 await client.query(`\
-        INSERT INTO fil_messages (\"CID\", \"Block\", \"From\", \"To\", \"Nonce\", \"Value\", \"GasLimit\", \"GasFeeCap\", \"GasPremium\", \"Method\", \"Params\", \"ExitCode\", \"Return\", \"GasUsed\", \"Version\") \
+        INSERT INTO fil_messages (\"CID\", \"Block\", \"From\", \"To\", \"Nonce\", \"Value\", \"GasLimit\", \"GasFeeCap\", \"GasPremium\", \"Method\", \"Params\", \"ExitCode\", \"Return\", \"GasUsed\", \"Version\", \"Cid\") \
         VALUES ('${msgCid}', \
         '${msg.Block}', \
         '${msg.From}', \
@@ -32,7 +33,8 @@ class DB {
         '${msg.ExitCode}', \
         '${msg.Return}', \
         '${msg.GasUsed}', \
-        '${msg.Version}') \
+        '${msg.Version}',
+        '${msgCid2}') \
 `);
 
             } catch (err) {
@@ -44,16 +46,47 @@ class DB {
         client.release();
     }
 
-    async save_block(block, msgs) {
+    async save_messages_cids(msgs) {
+        const client = await this.pool.connect();
+
+        for (let i = 0; i < msgs.length; i++) {
+            const msg = msgs[i];
+            try {
+                const { '/': msgCid } = msg.CID;
+                const { '/': msgCid2 } = msg.Cid;
+
+                await client.query(`\
+                UPDATE fil_messages SET \"Cid\" = '${msgCid2}' \
+                WHERE \"Block\" = ${msg.Block} AND \"CID\" = '${msgCid}'`);
+            } catch (err) {
+                WARNING(`[SaveMessagesCids] ${err}`)
+            }
+
+        }
+
+        client.release();
+    }
+
+    async save_block(block, msgs, msg_cid) {
         const client = await this.pool.connect();
         try {
             await client.query(`\
-           INSERT INTO fil_blocks (Block, Msgs) \
-           VALUES ('${block}', '${msgs}') `);
+           INSERT INTO fil_blocks (Block, Msgs, msg_cid) \
+           VALUES ('${block}', '${msgs}', '${msg_cid}') `);
 
 
         } catch (err) {
             WARNING(`[SaveBlock] ${err}`)
+        }
+        client.release()
+    }
+
+    async mark_block_with_msg_cid(block) {
+        const client = await this.pool.connect();
+        try {
+            await client.query(`UPDATE fil_blocks SET msg_cid = true WHERE block = ${block};`);
+        } catch (err) {
+            WARNING(`[MarkBlockMsgCid] ${err}`)
         }
         client.release()
     }
@@ -353,6 +386,25 @@ class DB {
         client.release();
 
         return missing_blocks;
+    } 
+    async get_blocks_with_missing_cid(head) {
+        const client = await this.pool.connect();
+        let blocks_with_missing_cid = undefined;
+        try {
+            const result = await client.query(`\
+            SELECT s.i AS block_with_missing_cid \
+            FROM generate_series(${head}, 0, -1) s(i) \
+            WHERE ( EXISTS (SELECT 1 FROM fil_blocks WHERE (block = s.i and msg_cid is null))); `);
+
+            if (result?.rows) {
+                blocks_with_missing_cid = result?.rows;
+            }
+        } catch (err) {
+            WARNING(`[GetMissingBlocks] ${err}`)
+        }
+        client.release();
+
+        return blocks_with_missing_cid;
     } 
 }
 

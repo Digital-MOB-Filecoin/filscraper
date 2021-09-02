@@ -304,7 +304,7 @@ async function scrape_block(block, msg, rescrape = false) {
 
     if (messages && messages.length > 0) {
         INFO(`[${msg}] ${block}, ${messages.length} messages`);
-        await db.save_block(block, messages.length);
+        await db.save_block(block, messages.length, true);
         if (!scraped_from_db) {
             await db.save_messages(messages);
         }
@@ -397,6 +397,40 @@ async function rescrape_missing_blocks() {
     }
 }
 
+async function rescrape_msg_cid() {
+    INFO(`[RescrapeMsgCid]`);
+    let head = await db.get_start_block();
+    INFO(`[RescrapeMsgCid] from [${head}, 0]`);
+    let blocks_with_missing_cid = await db.get_blocks_with_missing_cid(head);
+
+    INFO(`[RescrapeMsgCid] total blocks with missing cid: ${blocks_with_missing_cid.length}`);
+
+    let tipSetKey = null;
+
+    var blocksSlice = blocks_with_missing_cid;
+    while (blocksSlice.length) {
+        await Promise.all(blocksSlice.splice(0, SCRAPE_LIMIT).map(async (item) => {
+            try {
+                INFO(`[RescrapeMsgCid] ${item.block_with_missing_cid}`);
+                const result = await filecoinChainInfo.GetBlockMessagesByTipSet(item.block_with_missing_cid, tipSetKey);
+                if (result) {
+                    tipSetKey = result.tipSetKey;
+
+                    if (result?.messages.length) {
+                        await db.save_messages_cids(result?.messages);
+                        await db.mark_block_with_msg_cid(item.block_with_missing_cid);
+                        INFO(`[RescrapeMsgCid] ${item.block_with_missing_cid} done`);
+                    } else {
+                        ERROR(`[RescrapeMsgCid] ${item.block_with_missing_cid} no messages`);
+                    }
+                }
+            } catch (error) {
+                ERROR(`[RescrapeMsgCid] ${item.block_with_missing_cid} error :` , error);
+            }
+        }));
+    }
+}
+
 
 async function filscraper_version() {
     INFO(`FilScraper version: ${version}`);
@@ -432,7 +466,12 @@ const mainLoop = async _ => {
         }, 12 * 3600 * 1000); // refresh every 12 hours
 
         while (!stop) {
-            await rescrape_missing_blocks();
+            if (config.scraper.rescrape_msg_cid) {
+                await rescrape_msg_cid();
+            }
+            if (config.scraper.rescrape_missing_blocks) {
+                await rescrape_missing_blocks();
+            }
             await scrape();
             await rescrape();
 

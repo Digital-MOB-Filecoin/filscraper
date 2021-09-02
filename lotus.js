@@ -66,6 +66,10 @@ class Lotus {
         return this.LotusAPI("ChainGetTipSetByHeight", [chainEpoch, tipSetKey]);
     }
 
+    ChainGetTipSet(tipSetKey) {
+        return this.LotusAPI("ChainGetTipSet", [tipSetKey]);
+    }
+
     ChainGetParentMessages(blockCid) {
         return this.LotusAPI("ChainGetParentMessages", [{"/":blockCid}]);
     }
