@@ -400,7 +400,7 @@ class DB {
                 blocks_with_missing_cid = result?.rows;
             }
         } catch (err) {
-            WARNING(`[GetMissingBlocks] ${err}`)
+            WARNING(`[GetBlocksWithMissingCid] ${err}`)
         }
         client.release();
 

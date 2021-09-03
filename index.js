@@ -406,15 +406,16 @@ async function rescrape_msg_cid() {
     INFO(`[RescrapeMsgCid] total blocks with missing cid: ${blocks_with_missing_cid.length}`);
 
     let tipSetKey = null;
+    let tmpTipSetKey = null;
 
     var blocksSlice = blocks_with_missing_cid;
     while (blocksSlice.length) {
-        await Promise.all(blocksSlice.splice(0, SCRAPE_LIMIT).map(async (item) => {
+        await Promise.all(blocksSlice.splice(0, 10).map(async (item) => {
             try {
                 INFO(`[RescrapeMsgCid] ${item.block_with_missing_cid}`);
                 const result = await filecoinChainInfo.GetBlockMessagesByTipSet(item.block_with_missing_cid, tipSetKey);
                 if (result) {
-                    tipSetKey = result.tipSetKey;
+                    tmpTipSetKey = result.tipSetKey;
 
                     if (result?.messages.length) {
                         await db.save_messages_cids(result?.messages);
@@ -428,6 +429,8 @@ async function rescrape_msg_cid() {
                 ERROR(`[RescrapeMsgCid] ${item.block_with_missing_cid} error :` , error);
             }
         }));
+
+        tipSetKey = tmpTipSetKey;
     }
 }
 

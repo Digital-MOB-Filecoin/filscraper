@@ -163,7 +163,7 @@ class FilecoinChainInfo {
                 return undefined
             }
 
-            new_tipSetKey = tipSetResponse.data.result.Blocks[0].Parents;
+            new_tipSetKey = tipSetResponse.data.result.Cids;
 
             const { '/': blockCid } = tipSetResponse.data.result.Cids[0];
             const parentMessagesResponse = await this.lotus.ChainGetParentMessages(blockCid);
