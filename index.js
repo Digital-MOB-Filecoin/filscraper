@@ -158,6 +158,67 @@ async function process_messages(block, messages) {
                             }
                         }
                             break;
+                        case MinerMethods.PreCommitSectorBatch: {
+                            sector_batch = decoded_params[0][0];
+                            for (let i = 0; i < sector_batch.length; i++) {
+                                const preCommitSector = {
+                                    DealIDs: sector_batch[4],
+                                    Expiration: sector_batch[5],
+                                    ReplaceCapacity: sector_batch[6],
+                                    ReplaceSectorDeadline: sector_batch[7],
+                                    ReplaceSectorNumber: sector_batch[8],
+                                    ReplaceSectorPartition: sector_batch[9],
+                                    SealProof: sector_batch[0],
+                                    SealRandEpoch: sector_batch[3],
+                                    SealedCID: sector_batch[2],
+                                    SectorNumber: sector_batch[1]
+                                }
+
+                                const sector_size = await get_sector_size(miner);
+
+                                let sector_info = {
+                                    sector: preCommitSector.SectorNumber,
+                                    miner: miner,
+                                    type: 'commited',
+                                    size: sector_size,
+                                    start_epoch: msg.Block,
+                                    end_epoch: preCommitSector.Expiration,
+                                }
+
+                                if (preCommitSector.DealIDs?.length == 0) {
+                                    db.save_sector(sector_info);
+                                    commited = commited.add(new BN(sector_size));
+
+                                    let miner_event = get_miner_events(miner_events, miner, msg.Block)
+                                    miner_event.activated++;
+                                    miner_event.commited = miner_event.commited.add(new BN(sector_size));
+                                    miner_events.set(miner, miner_event);
+                                } else {
+                                    //used sector
+                                    sector_info.type = 'used';
+                                    db.save_sector(sector_info);
+                                    used = used.add(new BN(sector_size));
+
+                                    for (let i = 0; i < preCommitSector.DealIDs.length; i++) {
+                                        let deal_info = {
+                                            deal: preCommitSector.DealIDs[i],
+                                            sector: preCommitSector.SectorNumber,
+                                            miner: miner,
+                                            start_epoch: msg.Block,
+                                            end_epoch: preCommitSector.Expiration,
+                                        }
+                                        db.save_deal(deal_info);
+                                    }
+
+                                    let miner_event = get_miner_events(miner_events, miner, msg.Block)
+                                    miner_event.activated++;
+                                    miner_event.used = miner_event.used.add(new BN(sector_size));
+                                    miner_events.set(miner, miner_event);
+
+                                }
+                            }
+                        }
+                            break;
                         case MinerMethods.TerminateSectors: {
                             let sectors = decode_sectors(Buffer.from(decoded_params[0][0][2]));
 

@@ -22,6 +22,9 @@ const MinerMethods = {
     ConfirmUpdateWorkerKey: 21,
     RepayDebt: 22,
     ChangeOwnerAddress: 23,
+    DisputeWindowedPoSt: 24,
+    PreCommitSectorBatch: 25,
+    ProveCommitAggregate: 26
 };
 
 module.exports = {
