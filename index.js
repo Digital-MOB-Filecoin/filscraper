@@ -485,6 +485,8 @@ async function rescrape_msg_cid() {
                     } else {
                         ERROR(`[RescrapeMsgCid] ${item.block_with_missing_cid} no messages`);
                     }
+                } else {
+                    INFO(`[RescrapeMsgCid] ${item.block_with_missing_cid} error: ${JSON.stringify(result)}`);
                 }
             } catch (error) {
                 ERROR(`[RescrapeMsgCid] ${item.block_with_missing_cid} error :` , error);
