@@ -379,7 +379,7 @@ async function scrape_block(block, msg, rescrape = false) {
 }
 
 async function scrape() {
-    const chainHead = await filecoinChainInfo.GetChainHead();
+    const chainHead = await filecoinChainInfoInfura.GetChainHead();
     if (!chainHead) {
         ERROR(`[Scrape] error : unable to get chain head`);
         return;
