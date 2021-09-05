@@ -96,7 +96,7 @@ async function process_messages(block, messages) {
                 try {
                     decoded_params = cbor.decode(msg.Params, 'base64');
                 } catch (error) {
-                    if (msg.Params) {
+                    if (msg.Params != null) {
                         ERROR(`[ProcessMessages] error cbor.decode[${msg.Params}] : ${error}`);
                     }
                 }
@@ -529,11 +529,13 @@ const mainLoop = async _ => {
         await migrations.run();
         INFO('Run migrations, done');
 
-        refresh_views();
+        if (config.scraper.reprocess != 1) {
+            refresh_views();
 
-        setInterval(async () => {
-            await refresh_views();
-        }, 12 * 3600 * 1000); // refresh every 12 hours
+            setInterval(async () => {
+                await refresh_views();
+            }, 12 * 3600 * 1000); // refresh every 12 hours
+        }
 
         while (!stop) {
             if (config.scraper.rescrape_msg_cid == 1) {
