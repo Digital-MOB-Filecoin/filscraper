@@ -113,7 +113,7 @@ class DB {
         SELECT MAX(Block) \
         FROM fil_blocks `);
 
-            if (result?.rows[0]?.max) {
+            if (result?.rows[0]?.max && (result?.rows[0]?.max > block)) {
                 block = result?.rows[0]?.max;
             }
         } catch (err) {

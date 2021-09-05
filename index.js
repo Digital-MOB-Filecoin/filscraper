@@ -536,10 +536,10 @@ const mainLoop = async _ => {
         }, 12 * 3600 * 1000); // refresh every 12 hours
 
         while (!stop) {
-            if (config.scraper.rescrape_msg_cid) {
+            if (config.scraper.rescrape_msg_cid == 1) {
                 await rescrape_msg_cid();
             }
-            if (config.scraper.rescrape_missing_blocks) {
+            if (config.scraper.rescrape_missing_blocks == 1) {
                 await rescrape_missing_blocks();
             }
             await scrape(reprocess);
