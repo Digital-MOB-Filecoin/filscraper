@@ -338,7 +338,7 @@ async function process_messages(block, messages) {
     });
 }
 
-async function scrape_block(block, msg, rescrape = false) {
+async function scrape_block(block, msg, rescrape, reprocess) {
     let scraped_from_db = false;
     const found = await db.have_block(block);
     if (found) {
@@ -354,7 +354,7 @@ async function scrape_block(block, msg, rescrape = false) {
         INFO(`[${msg}] ${block} from db`);
         messages = await db.get_messages(block);
         scraped_from_db = true;
-    } else {
+    } else if (!reprocess) {
         INFO(`[${msg}] ${block}`);
         if (rescrape) {
             messages = await filecoinChainInfo.GetBlockMessages(block);
@@ -378,11 +378,16 @@ async function scrape_block(block, msg, rescrape = false) {
     }
 }
 
-async function scrape() {
+async function scrape(reprocess) {
+    let scrape_multiplier = 1;
     const chainHead = await filecoinChainInfoInfura.GetChainHead();
     if (!chainHead) {
         ERROR(`[Scrape] error : unable to get chain head`);
         return;
+    }
+
+    if (reprocess) {
+        scrape_multiplier = 10;
     }
 
     let start_block = await db.get_start_block();
@@ -397,9 +402,9 @@ async function scrape() {
 
     var blocksSlice = blocks;
     while (blocksSlice.length) {
-        await Promise.all(blocksSlice.splice(0, SCRAPE_LIMIT).map(async (block) => {
+        await Promise.all(blocksSlice.splice(0, scrape_multiplier * SCRAPE_LIMIT).map(async (block) => {
             try {
-                await scrape_block(block,'ScrapeBlock');
+                await scrape_block(block,'ScrapeBlock', false, reprocess);
             } catch (error) {
                 ERROR(`[Scrape] error :`);
                 console.error(error);
@@ -425,7 +430,7 @@ async function rescrape() {
         if (blocks) {
             await Promise.all(blocks.map(async (block) => {
                 try {
-                    await scrape_block(block.block, 'RescrapeBadBlock', true);
+                    await scrape_block(block.block, 'RescrapeBadBlock', true, false);
                 } catch (error) {
                     ERROR(`[Rescrape] error :`);
                     console.error(error);
@@ -449,7 +454,7 @@ async function rescrape_missing_blocks() {
     while (blocksSlice.length) {
         await Promise.all(blocksSlice.splice(0, SCRAPE_LIMIT).map(async (item) => {
             try {
-                await scrape_block(item.missing_block,'RescrapeMissingBlock');
+                await scrape_block(item.missing_block,'RescrapeMissingBlock', true, false);
             } catch (error) {
                 ERROR(`[RescrapeMissingBlocks] error :`);
                 console.error(error);
@@ -516,8 +521,10 @@ async function refresh_views() {
 
 const mainLoop = async _ => {
     try {
+        let reprocess = false;
         if (config.scraper.reprocess == 1) {
             WARNING('Reprocess');
+            reprocess = true;
             await migrations.reprocess();
         }
 
@@ -538,7 +545,7 @@ const mainLoop = async _ => {
             if (config.scraper.rescrape_missing_blocks) {
                 await rescrape_missing_blocks();
             }
-            await scrape();
+            await scrape(reprocess);
             await rescrape();
 
             INFO(`Pause for 60 seconds`);
