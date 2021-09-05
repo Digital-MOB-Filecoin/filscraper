@@ -96,7 +96,7 @@ async function process_messages(block, messages) {
                 try {
                     decoded_params = cbor.decode(msg.Params, 'base64');
                 } catch (error) {
-                    if (msg.Params != null) {
+                    if (msg.Params != 'null') {
                         ERROR(`[ProcessMessages] error cbor.decode[${msg.Params}] : ${error}`);
                     }
                 }
