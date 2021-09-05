@@ -379,15 +379,10 @@ async function scrape_block(block, msg, rescrape, reprocess) {
 }
 
 async function scrape(reprocess) {
-    let scrape_multiplier = 1;
     const chainHead = await filecoinChainInfoInfura.GetChainHead();
     if (!chainHead) {
         ERROR(`[Scrape] error : unable to get chain head`);
         return;
-    }
-
-    if (reprocess) {
-        scrape_multiplier = 10;
     }
 
     let start_block = await db.get_start_block();
@@ -402,7 +397,7 @@ async function scrape(reprocess) {
 
     var blocksSlice = blocks;
     while (blocksSlice.length) {
-        await Promise.all(blocksSlice.splice(0, scrape_multiplier * SCRAPE_LIMIT).map(async (block) => {
+        await Promise.all(blocksSlice.splice(0, SCRAPE_LIMIT).map(async (block) => {
             try {
                 await scrape_block(block,'ScrapeBlock', false, reprocess);
             } catch (error) {
