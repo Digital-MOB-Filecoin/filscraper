@@ -1,6 +1,6 @@
 {
   "name": "filscraper",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "description": "Filscraper",
   "main": "index.js",
   "scripts": {
@@ -18,7 +18,7 @@
   },
   "homepage": "https://github.com/Digital-MOB-Filecoin/filscraper#readme",
   "dependencies": {
-    "axios": "^0.21.1",
+    "axios": "0.21.1",
     "big.js": "^6.1.1",
     "bn": "^1.0.5",
     "bn.js": "^5.2.0",
