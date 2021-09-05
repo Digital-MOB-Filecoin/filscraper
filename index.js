@@ -89,7 +89,7 @@ async function process_messages(block, messages) {
     var commited = new BN('0', 10);
 
     while (messagesSlice.length) {
-        await Promise.all(messagesSlice.splice(0, 50).map(async (msg) => {
+        await Promise.all(messagesSlice.splice(0, SCRAPE_LIMIT).map(async (msg) => {
             if (msg.ExitCode == 0 && msg.Params && msg.To.startsWith('f0')) {
                 let miner = msg.To;
                 let decoded_params = [];
