@@ -390,10 +390,10 @@ async function scrape(reprocess) {
     let start_block = await db.get_start_block();
     const end_block = chainHead - 1;
 
-    INFO(`[Scrape] from ${start_block} to ${end_block}`);
+    INFO(`[Scrape] reverse scrape from ${end_block} to ${start_block}`);
 
     let blocks = [];
-    for (let i = start_block; i <= end_block; i++) {
+    for (let i = end_block; i > start_block; i--) {
         blocks.push(i);
     }
 
@@ -442,8 +442,14 @@ async function rescrape() {
 
 async function rescrape_missing_blocks() {
     INFO(`[RescrapeMissingBlocks]`);
-    let head = await db.get_start_block();
-    INFO(`[RescrapeMissingBlocks] from [0,${head}]`);
+    const chainHead = await filecoinChainInfoInfura.GetChainHead();
+    if (!chainHead) {
+        ERROR(`[RescrapeMissingBlocks] error : unable to get chain head`);
+        return;
+    }
+    const head = chainHead - 1;
+
+    INFO(`[RescrapeMissingBlocks] from [${head}, 0]`);
     let missing_blocks = await db.get_missing_blocks(head);
     INFO(`[RescrapeMissingBlocks] total missing blocks: ${missing_blocks.length}`);
 
@@ -529,7 +535,7 @@ const mainLoop = async _ => {
         await migrations.run();
         INFO('Run migrations, done');
 
-        if (config.scraper.reprocess != 1) {
+        if (config.scraper.reprocess != 1 && config.scraper.lock_views != 1) {
             refresh_views();
 
             setInterval(async () => {
