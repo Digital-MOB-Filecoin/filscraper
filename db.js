@@ -200,74 +200,144 @@ class DB {
         return found;
     }
 
-    async save_sector(sector_info) {
-        const client = await this.pool.connect();
-        try {
-            await client.query(`\
-           INSERT INTO fil_sectors (sector, miner, type, size, start_epoch, end_epoch) \
-           VALUES ('${sector_info.sector}', '${sector_info.miner}','${sector_info.type}','${sector_info.size}','${sector_info.start_epoch}','${sector_info.end_epoch}') `);
+    async save_sectors(sectors_info) {
+        let values = '';
+        for (let i = 0; i < sectors_info.length - 1; i++) {
+            let sector_info = sectors_info[i];
+            values += `('${sector_info.sector}', \
+                        '${sector_info.miner}',\
+                        '${sector_info.type}',\
+                        '${sector_info.size}',\
+                        '${sector_info.start_epoch}',\
+                        '${sector_info.end_epoch}'),`;
+        }
 
+        values += `('${sectors_info[sectors_info.length-1].sector}', \
+        '${sectors_info[sectors_info.length-1].miner}',\
+        '${sectors_info[sectors_info.length-1].type}',\
+        '${sectors_info[sectors_info.length-1].size}',\
+        '${sectors_info[sectors_info.length-1].start_epoch}',\
+        '${sectors_info[sectors_info.length-1].end_epoch}');`;
+
+        try {
+            await this.pool.query(`\
+                INSERT INTO fil_sectors (sector, miner, type, size, start_epoch, end_epoch) \
+                VALUES ${values}`);
 
         } catch (err) {
-            WARNING(`[SaveSector] ${err}`)
+            WARNING(`[SaveSectors] ${err}`)
         }
-        client.release()
     }
 
-    async save_sector_events(sector_events) {
-        const client = await this.pool.connect();
+    async save_sectors_events(sectors_events) {
+        let values = '';
+        for (let i = 0; i < sectors_events.length - 1; i++) {
+            let sector_events = sectors_events[i];
+
+            values += `('${sector_events.type}', \
+                        '${sector_events.miner}', \
+                        '${sector_events.sector}', \
+                        '${sector_events.epoch}'), `
+        }
+
+        values += `('${sectors_events[sectors_events.length-1].type}', \
+                    '${sectors_events[sectors_events.length-1].miner}', \
+                    '${sectors_events[sectors_events.length-1].sector}', \
+                    '${sectors_events[sectors_events.length-1].epoch}');`
+
         try {
-            await client.query(`\
+            await this.pool.query(`\
            INSERT INTO fil_sector_events (type, miner, sector, epoch) \
-           VALUES ('${sector_events.type}', '${sector_events.miner}','${sector_events.sector}','${sector_events.epoch}') `);
+           VALUES  ${values}`);
 
 
         } catch (err) {
-            WARNING(`[SaveSectorEvents] ${err}`)
+            WARNING(`[SaveSectorsEvents] ${err}`)
         }
-        client.release()
     }
 
-    async save_miner_events(miner, events) {
-        const client = await this.pool.connect();
+    async save_miners_events(miners_events) {
+        let values = '';
+        for (let i = 0; i < miners_events.length - 1; i++) {
+            let miner_events = miners_events[i];
+            values += `('${miner_events.miner}', \
+            '${miner_events.commited.toString(10)}',\
+            '${miner_events.used.toString(10)}',\
+            '${miner_events.total.toString(10)}',\
+            '${miner_events.fraction.toPrecision(5)}',\
+            '${miner_events.activated}',\
+            '${miner_events.terminated}',\
+            '${miner_events.faults}',\
+            '${miner_events.recovered}',\
+            '${miner_events.proofs}',\
+            '${miner_events.epoch}'),`
+        }
+
+        values += `('${miners_events[miners_events.length-1].miner}', \
+        '${miners_events[miners_events.length-1].commited.toString(10)}',\
+        '${miners_events[miners_events.length-1].used.toString(10)}',\
+        '${miners_events[miners_events.length-1].total.toString(10)}',\
+        '${miners_events[miners_events.length-1].fraction.toPrecision(5)}',\
+        '${miners_events[miners_events.length-1].activated}',\
+        '${miners_events[miners_events.length-1].terminated}',\
+        '${miners_events[miners_events.length-1].faults}',\
+        '${miners_events[miners_events.length-1].recovered}',\
+        '${miners_events[miners_events.length-1].proofs}',\
+        '${miners_events[miners_events.length-1].epoch}');`
+
         try {
-            await client.query(`\
+            await this.pool.query(`\
            INSERT INTO fil_miner_events (miner, commited, used, total, fraction, activated, terminated, faults, recovered, proofs, epoch) \
-           VALUES ('${miner}', '${events.commited.toString(10)}','${events.used.toString(10)}','${events.total.toString(10)}','${events.fraction.toPrecision(5)}','${events.activated}','${events.terminated}','${events.faults}','${events.recovered}','${events.proofs}','${events.epoch}') `);
+           VALUES ${values} `);
 
 
         } catch (err) {
             WARNING(`[SaveMinerEvents] ${err}`)
         }
-        client.release()
     }
 
-    async save_deal(deal_info) {
-        const client = await this.pool.connect();
+    async save_deals(deals_info) {
+        let values = '';
+        for (let i = 0; i < deals_info.length - 1; i++) {
+            let deal_info = deals_info[i];
+            values += `('${deal_info.deal}', \
+                        '${deal_info.sector}',\
+                        '${deal_info.miner}',\
+                        '${deal_info.start_epoch}',\
+                        '${deal_info.end_epoch}'),`;
+        }
+
+        values += `('${deals_info[deals_info.length-1].deal}', \
+                    '${deals_info[deals_info.length-1].sector}',\
+                    '${deals_info[deals_info.length-1].miner}',\
+                    '${deals_info[deals_info.length-1].start_epoch}',\
+                    '${deals_info[deals_info.length-1].end_epoch}');`;
+
         try {
-            await client.query(`\
+            await this.pool.query(`\
            INSERT INTO fil_deals (deal, sector, miner, start_epoch, end_epoch) \
-           VALUES ('${deal_info.deal}', '${deal_info.sector}','${deal_info.miner}','${deal_info.start_epoch}','${deal_info.end_epoch}') `);
+           VALUES ${values}`);
 
 
         } catch (err) {
             WARNING(`[SaveDeal] ${err}`)
         }
-        client.release()
     }
 
     async save_network(network_info) {
-        const client = await this.pool.connect();
         try {
-            await client.query(`\
+            await this.pool.query(`\
            INSERT INTO fil_network (epoch, commited, used, total, fraction) \
-           VALUES ('${network_info.epoch}', '${network_info.commited.toString(10)}','${network_info.used.toString(10)}','${network_info.total.toString(10)}','${network_info.fraction.toPrecision(5)}') `);
+           VALUES ('${network_info.epoch}', \
+                   '${network_info.commited.toString(10)}', \
+                   '${network_info.used.toString(10)}', \
+                   '${network_info.total.toString(10)}', \
+                   '${network_info.fraction.toPrecision(5)}') `);
 
 
         } catch (err) {
             WARNING(`[SaveNetwork] ${err}`)
         }
-        client.release()
     }
 
     async get_sector_size(miner) {

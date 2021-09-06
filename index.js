@@ -12,9 +12,11 @@ const { MinerMethods } = require('./miner-methods');
 const { decodeRLE2 } = require('./rle');
 const { hdiff } = require('./utils');
 
-const SCRAPE_LIMIT = 100 // blocks
+const SCRAPE_LIMIT = 10 // blocks
+const INSERT_LIMIT = 100 // rows
 const RESCRAPE_INTERVAL = 1 // hours
 let last_rescrape = Date.now();
+let miner_sectors = new Map();
 
 let filecoinChainInfo = new FilecoinChainInfo(config.lotus.api, config.lotus.token);
 let filecoinChainInfoInfura = new FilecoinChainInfo(config.lotus.api_infura, 'token');
@@ -61,21 +63,28 @@ function get_miner_events(miner_events, miner, epoch) {
 }
 
 async function get_sector_size(miner) {
-    let sector_size = await db.get_sector_size(miner);
+    let sector_size = 34359738368;
 
-    if (!sector_size) {
-        const minerInfo = await lotus_infura.StateMinerInfo(miner);
+    if (miner_sectors.has(miner)) {
+        sector_size = miner_sectors.get(miner);
+    } else {
+        sector_size = await db.get_sector_size(miner);
 
-        if (minerInfo?.data?.result?.SectorSize) {
-            let sectorSize = minerInfo?.data.result.SectorSize;
-            sector_size = sectorSize;
-            await db.save_sector_size(miner, sector_size);
+        if (!sector_size) {
+            const minerInfo = await lotus_infura.StateMinerInfo(miner);
 
-            INFO(`[GetSectorSize] miner: ${miner} -> ${sector_size}`);
-        } else {
-            ERROR(`[GetSectorSize] miner: ${miner} lotus.StateMinerInfo:  ${JSON.stringify(minerInfo?.data)}`);
-            sector_size = 34359738368;
+            if (minerInfo?.data?.result?.SectorSize) {
+                let sectorSize = minerInfo?.data.result.SectorSize;
+                sector_size = sectorSize;
+                await db.save_sector_size(miner, sector_size);
+
+                INFO(`[GetSectorSize] miner: ${miner} -> ${sector_size}`);
+            } else {
+                ERROR(`[GetSectorSize] miner: ${miner} lotus.StateMinerInfo:  ${JSON.stringify(minerInfo?.data)}`);
+            }
         }
+
+        miner_sectors.set(miner, sector_size);
     }
 
     return sector_size;
@@ -87,6 +96,10 @@ async function process_messages(block, messages) {
 
     var used = new BN('0', 10);
     var commited = new BN('0', 10);
+    let deals = [];
+    let sectors = [];
+    let sectors_events = [];
+    let miners_events = [];
 
     while (messagesSlice.length) {
         await Promise.all(messagesSlice.splice(0, SCRAPE_LIMIT).map(async (msg) => {
@@ -129,7 +142,7 @@ async function process_messages(block, messages) {
                             }
 
                             if (preCommitSector.DealIDs?.length == 0) {
-                                db.save_sector(sector_info);
+                                sectors.push(sector_info);
                                 commited = commited.add(new BN(sector_size));
 
                                 let miner_event = get_miner_events(miner_events, miner, msg.Block)
@@ -139,7 +152,7 @@ async function process_messages(block, messages) {
                             } else {
                                 //used sector
                                 sector_info.type = 'used';
-                                db.save_sector(sector_info);
+                                sectors.push(sector_info);
                                 used = used.add(new BN(sector_size));
 
                                 for (let i = 0; i < preCommitSector.DealIDs.length; i++) {
@@ -150,7 +163,7 @@ async function process_messages(block, messages) {
                                         start_epoch: msg.Block,
                                         end_epoch: preCommitSector.Expiration,
                                     }
-                                    db.save_deal(deal_info);
+                                    deals.push(deal_info);
                                 }
 
                                 let miner_event = get_miner_events(miner_events, miner, msg.Block)
@@ -188,7 +201,7 @@ async function process_messages(block, messages) {
                                 }
 
                                 if (preCommitSector.DealIDs?.length == 0) {
-                                    db.save_sector(sector_info);
+                                    sectors.push(sector_info);
                                     commited = commited.add(new BN(sector_size));
 
                                     let miner_event = get_miner_events(miner_events, miner, msg.Block)
@@ -198,7 +211,7 @@ async function process_messages(block, messages) {
                                 } else {
                                     //used sector
                                     sector_info.type = 'used';
-                                    db.save_sector(sector_info);
+                                    sectors.push(sector_info);
                                     used = used.add(new BN(sector_size));
 
                                     for (let i = 0; i < preCommitSector.DealIDs.length; i++) {
@@ -209,7 +222,7 @@ async function process_messages(block, messages) {
                                             start_epoch: msg.Block,
                                             end_epoch: preCommitSector.Expiration,
                                         }
-                                        db.save_deal(deal_info);
+                                        deals.push(deal_info);
                                     }
 
                                     let miner_event = get_miner_events(miner_events, miner, msg.Block)
@@ -232,14 +245,12 @@ async function process_messages(block, messages) {
                                     epoch: msg.Block,
                                 }
 
-                                db.save_sector_events(sector_events);
+                                sectors_events.push(sector_events);
                             }
 
                             let miner_event = get_miner_events(miner_events, miner, msg.Block)
                             miner_event.terminated++;
                             miner_events.set(miner, miner_event);
-
-                            INFO(`[TerminateSectors] Miner:${miner} sectors: ${sectors} sectors`);
                         }
                             break;
                         case MinerMethods.DeclareFaults: {
@@ -253,14 +264,12 @@ async function process_messages(block, messages) {
                                     epoch: msg.Block,
                                 }
 
-                                db.save_sector_events(sector_events);
+                                sectors_events.push(sector_events);
                             }
 
                             let miner_event = get_miner_events(miner_events, miner, msg.Block)
                             miner_event.faults++;
                             miner_events.set(miner, miner_event);
-
-                            INFO(`[DeclareFaults] Miner:${miner} for ${sectors.length} sectors`);
                         }
                             break;
                         case MinerMethods.DeclareFaultsRecovered: {
@@ -274,14 +283,12 @@ async function process_messages(block, messages) {
                                     epoch: msg.Block,
                                 }
 
-                                db.save_sector_events(sector_events);
+                                sectors_events.push(sector_events);
                             }
 
                             let miner_event = get_miner_events(miner_events, miner, msg.Block)
                             miner_event.recovered++;
                             miner_events.set(miner, miner_event);
-
-                            INFO(`[DeclareFaultsRecovered] Miner:${miner} for ${sectors.length} sectors`);
                         }
                             break;
                         case MinerMethods.ProveCommitSector: {
@@ -292,7 +299,7 @@ async function process_messages(block, messages) {
                                 epoch: msg.Block,
                             }
 
-                            db.save_sector_events(sector_events);
+                            sectors_events.push(sector_events);
 
                             let miner_event = get_miner_events(miner_events, miner, msg.Block)
                             miner_event.proofs++;
@@ -324,7 +331,24 @@ async function process_messages(block, messages) {
         fraction: fraction
     }
 
+    INFO(`[ProcessBlock] ${block} sectors: ${sectors.length} , sector events: ${sectors_events.length} , miner events: ${miner_events.size} , deals ${deals.length}`);
+
     await db.save_network(network_info);
+
+    let sectorsSlice = sectors;
+    while (sectorsSlice.length) {
+        await db.save_sectors(sectorsSlice.splice(0, INSERT_LIMIT));
+    }
+
+    let sectorsEventsSlice = sectors_events;
+    while (sectorsEventsSlice.length) {
+        await db.save_sectors_events(sectorsEventsSlice.splice(0, INSERT_LIMIT));
+    }
+
+    let dealsSlice = deals;
+    while (dealsSlice.length) {
+        await db.save_deals(dealsSlice.splice(0, INSERT_LIMIT));
+    }
 
     miner_events.forEach((value, key, map) => {
         value.total = value.commited.add(value.used);
@@ -336,8 +360,14 @@ async function process_messages(block, messages) {
         }
         value.fraction = miner_fraction;
 
-        db.save_miner_events(key, value);
+        miners_events.push({miner: key, ...value})
     });
+
+    let minersEventsSlice = miners_events;
+    while (minersEventsSlice.length) {
+        await db.save_miners_events(minersEventsSlice.splice(0, INSERT_LIMIT));
+    }
+
 }
 
 async function scrape_block(block, msg, rescrape, reprocess) {
@@ -367,7 +397,7 @@ async function scrape_block(block, msg, rescrape, reprocess) {
 
     if (messages && messages.length > 0) {
         INFO(`[${msg}] ${block}, ${messages.length} messages`);
-        await db.save_block(block, messages.length, true);
+        await db.save_block(block, messages.length, !scraped_from_db);
         if (!scraped_from_db) {
             await db.save_messages(messages);
         }
@@ -390,12 +420,15 @@ async function scrape(reprocess) {
     let start_block = await db.get_start_block();
     const end_block = chainHead - 1;
 
+    var scrape_start_time = new Date().getTime();
     INFO(`[Scrape] reverse scrape from ${end_block} to ${start_block}`);
 
     let blocks = [];
     for (let i = end_block; i > start_block; i--) {
         blocks.push(i);
     }
+
+    let no_blocks = blocks.length;
 
     var blocksSlice = blocks;
     while (blocksSlice.length) {
@@ -408,6 +441,11 @@ async function scrape(reprocess) {
             }
         }));
     }
+
+    var scrape_end_time = new Date().getTime();
+    var duration = (scrape_end_time - scrape_start_time) / 1000;
+
+    INFO(`[Scrape] reverse scrape ${no_blocks} in ${duration} sec`);
 }
 
 async function rescrape() {
@@ -479,7 +517,7 @@ async function rescrape_msg_cid() {
 
     var blocksSlice = blocks_with_missing_cid;
     while (blocksSlice.length) {
-        await Promise.all(blocksSlice.splice(0, 10).map(async (item) => {
+        await Promise.all(blocksSlice.splice(0, SCRAPE_LIMIT).map(async (item) => {
             try {
                 INFO(`[RescrapeMsgCid] ${item.block_with_missing_cid}`);
                 const result = await filecoinChainInfo.GetBlockMessagesByTipSet(item.block_with_missing_cid, tipSetKey);
@@ -536,6 +574,7 @@ const mainLoop = async _ => {
         INFO('Run migrations, done');
 
         if (config.scraper.reprocess != 1 && config.scraper.lock_views != 1) {
+            await migrations.create_indexes();
             refresh_views();
 
             setInterval(async () => {
