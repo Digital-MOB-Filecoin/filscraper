@@ -19,4 +19,4 @@ RUN yarn install --production
 
 COPY . .
 
-CMD ["node --max-old-space-size=4096", "index.js"]
+CMD ["node", "--max-old-space-size=4096", "index.js"]
