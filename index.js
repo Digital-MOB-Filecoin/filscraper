@@ -575,8 +575,12 @@ const mainLoop = async _ => {
 
         if (config.scraper.reprocess != 1 && config.scraper.lock_views != 1) {
             await migrations.create_indexes();
-            refresh_views();
-
+            if (config.scraper.await_refresh_views != 1) {
+                refresh_views();
+            } else {
+                await refresh_views();
+            }
+            
             setInterval(async () => {
                 await refresh_views();
             }, 12 * 3600 * 1000); // refresh every 12 hours
