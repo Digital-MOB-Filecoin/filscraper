@@ -410,15 +410,19 @@ async function scrape_block(block, msg, rescrape, reprocess) {
     }
 }
 
-async function scrape(reprocess) {
+async function scrape(reprocess, check_for_missing_blocks) {
     const chainHead = await filecoinChainInfoInfura.GetChainHead();
     if (!chainHead) {
         ERROR(`[Scrape] error : unable to get chain head`);
         return;
     }
 
-    let start_block = await db.get_start_block();
+    let start_block = 0;
     const end_block = chainHead - 1;
+
+    if (!check_for_missing_blocks) {
+        start_block = await db.get_start_block();
+    }
 
     var scrape_start_time = new Date().getTime();
     INFO(`[Scrape] reverse scrape from ${end_block} to ${start_block}`);
@@ -593,7 +597,7 @@ const mainLoop = async _ => {
             if (config.scraper.rescrape_missing_blocks == 1) {
                 await rescrape_missing_blocks();
             }
-            await scrape(reprocess);
+            await scrape(reprocess, config.scraper.check_missing_blocks == 1);
             await rescrape();
 
             INFO(`Pause for 60 seconds`);
