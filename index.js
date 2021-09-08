@@ -570,7 +570,6 @@ const mainLoop = async _ => {
         if (config.scraper.reprocess == 1) {
             WARNING('Reprocess');
             reprocess = true;
-            await migrations.reprocess();
         }
 
         INFO('Run migrations');
