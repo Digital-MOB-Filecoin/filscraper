@@ -17,7 +17,6 @@ const INSERT_LIMIT = 100 // rows
 const RESCRAPE_INTERVAL = 1 // hours
 let last_rescrape = Date.now();
 let miner_sectors = new Map();
-let miner_events = new Map();
 
 let filecoinChainInfo = new FilecoinChainInfo(config.lotus.api, config.lotus.token);
 let filecoinChainInfoInfura = new FilecoinChainInfo(config.lotus.api_infura, 'token');
@@ -40,7 +39,7 @@ function decode_sectors(buffer) {
     return sectors;
 }
 
-function get_miner_events(miner, epoch) {
+function get_miner_events(miner_events, miner, epoch) {
     let miner_event;
 
     if (miner_events.has(miner)) {
@@ -92,6 +91,7 @@ async function get_sector_size(miner) {
 }
 
 async function process_messages(block, messages) {
+    let miner_events = new Map();
     var messagesSlice = messages;
 
     var used = new BN('0', 10);
@@ -145,7 +145,7 @@ async function process_messages(block, messages) {
                                 sectors.push(sector_info);
                                 commited = commited.add(new BN(sector_size));
 
-                                let miner_event = get_miner_events(miner, msg.Block)
+                                let miner_event = get_miner_events(miner_events, miner, msg.Block)
                                 miner_event.activated++;
                                 miner_event.commited = miner_event.commited.add(new BN(sector_size));
                                 miner_events.set(miner, miner_event);
@@ -166,7 +166,7 @@ async function process_messages(block, messages) {
                                     deals.push(deal_info);
                                 }
 
-                                let miner_event = get_miner_events(miner, msg.Block)
+                                let miner_event = get_miner_events(miner_events, miner, msg.Block)
                                 miner_event.activated++;
                                 miner_event.used = miner_event.used.add(new BN(sector_size));
                                 miner_events.set(miner, miner_event);
@@ -204,7 +204,7 @@ async function process_messages(block, messages) {
                                     sectors.push(sector_info);
                                     commited = commited.add(new BN(sector_size));
 
-                                    let miner_event = get_miner_events(miner, msg.Block)
+                                    let miner_event = get_miner_events(miner_events, miner, msg.Block)
                                     miner_event.activated++;
                                     miner_event.commited = miner_event.commited.add(new BN(sector_size));
                                     miner_events.set(miner, miner_event);
@@ -225,7 +225,7 @@ async function process_messages(block, messages) {
                                         deals.push(deal_info);
                                     }
 
-                                    let miner_event = get_miner_events(miner, msg.Block)
+                                    let miner_event = get_miner_events(miner_events, miner, msg.Block)
                                     miner_event.activated++;
                                     miner_event.used = miner_event.used.add(new BN(sector_size));
                                     miner_events.set(miner, miner_event);
@@ -248,7 +248,7 @@ async function process_messages(block, messages) {
                                 sectors_events.push(sector_events);
                             }
 
-                            let miner_event = get_miner_events(miner, msg.Block)
+                            let miner_event = get_miner_events(miner_events, miner, msg.Block)
                             miner_event.terminated++;
                             miner_events.set(miner, miner_event);
                         }
@@ -267,7 +267,7 @@ async function process_messages(block, messages) {
                                 sectors_events.push(sector_events);
                             }
 
-                            let miner_event = get_miner_events(miner, msg.Block)
+                            let miner_event = get_miner_events(miner_events, miner, msg.Block)
                             miner_event.faults++;
                             miner_events.set(miner, miner_event);
                         }
@@ -286,7 +286,7 @@ async function process_messages(block, messages) {
                                 sectors_events.push(sector_events);
                             }
 
-                            let miner_event = get_miner_events(miner, msg.Block)
+                            let miner_event = get_miner_events(miner_events, miner, msg.Block)
                             miner_event.recovered++;
                             miner_events.set(miner, miner_event);
                         }
@@ -301,7 +301,7 @@ async function process_messages(block, messages) {
 
                             sectors_events.push(sector_events);
 
-                            let miner_event = get_miner_events(miner, msg.Block)
+                            let miner_event = get_miner_events(miner_events, miner, msg.Block)
                             miner_event.proofs++;
                             miner_events.set(miner, miner_event);
                         }
