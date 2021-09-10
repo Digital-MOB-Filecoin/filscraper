@@ -15,7 +15,7 @@ const { hdiff } = require('./utils');
 const SCRAPE_LIMIT = 10 // blocks
 const INSERT_LIMIT = 100 // rows
 const RESCRAPE_INTERVAL = 1 // hours
-let last_rescrape = Date.now();
+let last_rescrape = new Date(new Date().setHours(new Date().getHours() - 2));
 let miner_sectors = new Map();
 
 let filecoinChainInfo = new FilecoinChainInfo(config.lotus.api, config.lotus.token);
@@ -461,6 +461,8 @@ async function rescrape() {
         return;
     }
 
+    INFO('[Rescrape]');
+
     last_rescrape = Date.now();
 
     do {
@@ -469,7 +471,7 @@ async function rescrape() {
         if (blocks) {
             await Promise.all(blocks.map(async (block) => {
                 try {
-                    await scrape_block(block.block, 'RescrapeBadBlock', true, false);
+                    await scrape_block(parseInt(block.block), 'RescrapeBadBlock', true, false);
                 } catch (error) {
                     ERROR(`[Rescrape] error :`);
                     console.error(error);
@@ -499,7 +501,7 @@ async function rescrape_missing_blocks() {
     while (blocksSlice.length) {
         await Promise.all(blocksSlice.splice(0, SCRAPE_LIMIT).map(async (item) => {
             try {
-                await scrape_block(item.missing_block,'RescrapeMissingBlock', true, false);
+                await scrape_block(parseInt(item.missing_block),'RescrapeMissingBlock', true, false);
             } catch (error) {
                 ERROR(`[RescrapeMissingBlocks] error :`);
                 console.error(error);
@@ -523,23 +525,25 @@ async function rescrape_msg_cid() {
     while (blocksSlice.length) {
         await Promise.all(blocksSlice.splice(0, SCRAPE_LIMIT).map(async (item) => {
             try {
-                INFO(`[RescrapeMsgCid] ${item.block_with_missing_cid}`);
-                const result = await filecoinChainInfo.GetBlockMessagesByTipSet(item.block_with_missing_cid, tipSetKey);
+                let block = parseInt(item.block_with_missing_cid);
+
+                INFO(`[RescrapeMsgCid] ${block}`);
+                const result = await filecoinChainInfo.GetBlockMessagesByTipSet(block, tipSetKey);
                 if (result) {
                     tmpTipSetKey = result.tipSetKey;
 
                     if (result?.messages.length) {
                         await db.save_messages_cids(result?.messages);
-                        await db.mark_block_with_msg_cid(item.block_with_missing_cid);
-                        INFO(`[RescrapeMsgCid] ${item.block_with_missing_cid} done`);
+                        await db.mark_block_with_msg_cid(block);
+                        INFO(`[RescrapeMsgCid] ${block} done`);
                     } else {
-                        ERROR(`[RescrapeMsgCid] ${item.block_with_missing_cid} no messages`);
+                        ERROR(`[RescrapeMsgCid] ${block} no messages`);
                     }
                 } else {
-                    INFO(`[RescrapeMsgCid] ${item.block_with_missing_cid} error: ${JSON.stringify(result)}`);
+                    INFO(`[RescrapeMsgCid] ${block} error: ${JSON.stringify(result)}`);
                 }
             } catch (error) {
-                ERROR(`[RescrapeMsgCid] ${item.block_with_missing_cid} error :` , error);
+                ERROR(`[RescrapeMsgCid] ${item.block_with_missing_cid} error :`, error);
             }
         }));
 

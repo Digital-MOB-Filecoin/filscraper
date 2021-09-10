@@ -84,6 +84,7 @@ class FilecoinChainInfo {
 
     async GetBlockMessages(block) {
         let messages = [];
+        let block_to_scrape = parseInt(block);
 
         try {
             const chainHeadResponse = await this.lotus.ChainHead();
@@ -91,12 +92,12 @@ class FilecoinChainInfo {
                 return undefined
             }
 
-            if (block >= chainHeadResponse.data.result.Height) {
-                ERROR(`[GetBlockMessages] block[${block}], is bigger then chainHead[${chainHeadResponse.data.result.Height}]`);
+            if (block_to_scrape >= chainHeadResponse.data.result.Height) {
+                ERROR(`[GetBlockMessages] block[${block_to_scrape}], is bigger then chainHead[${chainHeadResponse.data.result.Height}]`);
                 return undefined
             }
 
-            var tipSetResponse = await this.lotus.ChainGetTipSetByHeight(block + 1, chainHeadResponse.data.result.Cids);
+            var tipSetResponse = await this.lotus.ChainGetTipSetByHeight(block_to_scrape + 1, chainHeadResponse.data.result.Cids);
             if (!this.CheckResponse('ChainGetTipSetByHeight', tipSetResponse)) {
                 return undefined
             }
@@ -119,7 +120,7 @@ class FilecoinChainInfo {
                 new_messages = [];
             }
 
-            new_messages = new_messages.map((msg, r) => ({ Cid: msg.Cid, ...msg.Message, ExitCode: receipts[r].ExitCode, Return: receipts[r].Return, GasUsed: receipts[r].GasUsed, Block: block }));
+            new_messages = new_messages.map((msg, r) => ({ Cid: msg.Cid, ...msg.Message, ExitCode: receipts[r].ExitCode, Return: receipts[r].Return, GasUsed: receipts[r].GasUsed, Block: block_to_scrape }));
             messages = [...messages, ...new_messages];
 
         } catch (e) {
@@ -147,6 +148,7 @@ class FilecoinChainInfo {
     async GetBlockMessagesByTipSet(block, tipSetKey) {
         let messages = [];
         let new_tipSetKey = undefined;
+        let block_to_scrape = parseInt(block);
 
         try {
             if (!tipSetKey) {
@@ -158,7 +160,7 @@ class FilecoinChainInfo {
                 }
             }
 
-            var tipSetResponse = await this.lotus.ChainGetTipSetByHeight(block + 1, tipSetKey);
+            var tipSetResponse = await this.lotus.ChainGetTipSetByHeight(block_to_scrape + 1, tipSetKey);
             if (!this.CheckResponse('ChainGetTipSetByHeight', tipSetResponse)) {
                 return undefined
             }
@@ -183,7 +185,7 @@ class FilecoinChainInfo {
                 new_messages = [];
             }
 
-            new_messages = new_messages.map((msg, r) => ({ Cid: msg.Cid, ...msg.Message, ExitCode: receipts[r].ExitCode, Return: receipts[r].Return, GasUsed: receipts[r].GasUsed, Block: block }));
+            new_messages = new_messages.map((msg, r) => ({ Cid: msg.Cid, ...msg.Message, ExitCode: receipts[r].ExitCode, Return: receipts[r].Return, GasUsed: receipts[r].GasUsed, Block: block_to_scrape }));
             messages = [...messages, ...new_messages];
 
         } catch (e) {

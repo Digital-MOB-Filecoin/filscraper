@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_miners_view ON fil_miners_view(miner);
