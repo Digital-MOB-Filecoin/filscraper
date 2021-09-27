@@ -30,3 +30,13 @@ LOTUS_API_INFURA='infura_lotus_api'
 LOTUS_API='backup_lotus_api_full_node'
 LOTUS_TOKEN='backup_lotus_api_token'
 ```
+
+#### install modules
+```shell
+npm i
+```
+
+#### start scraper
+```shell
+npm run start
+```
