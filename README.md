@@ -19,3 +19,14 @@ grant all on database filchain to filchain;
 \c filchain
 alter schema public owner to filchain;
 ```
+
+#### update env variables
+```shell
+cp .env.sample .env
+```
+
+```shell
+LOTUS_API_INFURA='infura_lotus_api'
+LOTUS_API='backup_lotus_api_full_node'
+LOTUS_TOKEN='backup_lotus_api_token'
+```
