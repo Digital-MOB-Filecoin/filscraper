@@ -14,7 +14,7 @@ const { hdiff } = require('./utils');
 
 const SCRAPE_LIMIT = 10 // blocks
 const INSERT_LIMIT = 100 // rows
-const RESCRAPE_INTERVAL = 1 // hours
+const RESCRAPE_INTERVAL = 24 // hours
 let last_rescrape = new Date(new Date().setHours(new Date().getHours() - 2));
 let miner_sectors = new Map();
 
