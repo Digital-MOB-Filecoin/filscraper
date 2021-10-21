@@ -1,0 +1,10 @@
+TRUNCATE TABLE fil_network CASCADE;
+TRUNCATE TABLE fil_miner_events CASCADE;
+TRUNCATE TABLE fil_deals CASCADE;
+TRUNCATE TABLE fil_sectors CASCADE;
+TRUNCATE TABLE fil_sector_events CASCADE;
+TRUNCATE TABLE fil_bad_blocks CASCADE;
+TRUNCATE TABLE fil_blocks CASCADE;
+DROP INDEX IF EXISTS idx_fil_network;
+DROP INDEX IF EXISTS idx_fil_miner_events;
+DROP INDEX IF EXISTS idx_fil_miners;
