@@ -174,7 +174,7 @@ async function process_messages(block, messages) {
                         }
                             break;
                         case MinerMethods.PreCommitSectorBatch: {
-                            sector_batch = decoded_params[0][0];
+                            sector_batch = decoded_params[0];
                             for (let i = 0; i < sector_batch.length; i++) {
                                 const preCommitSector = {
                                     DealIDs: sector_batch[4],
