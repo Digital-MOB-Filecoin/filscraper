@@ -174,19 +174,20 @@ async function process_messages(block, messages) {
                         }
                             break;
                         case MinerMethods.PreCommitSectorBatch: {
-                            sector_batch = decoded_params[0];
-                            for (let i = 0; i < sector_batch.length; i++) {
+                            let all_sectors = decoded_params[0];
+                            for (let i = 0; i < all_sectors.length; i++) {
+                                let current_sector = all_sectors[i];
                                 const preCommitSector = {
-                                    DealIDs: sector_batch[4],
-                                    Expiration: sector_batch[5],
-                                    ReplaceCapacity: sector_batch[6],
-                                    ReplaceSectorDeadline: sector_batch[7],
-                                    ReplaceSectorNumber: sector_batch[8],
-                                    ReplaceSectorPartition: sector_batch[9],
-                                    SealProof: sector_batch[0],
-                                    SealRandEpoch: sector_batch[3],
-                                    SealedCID: sector_batch[2],
-                                    SectorNumber: sector_batch[1]
+                                    DealIDs: current_sector[4],
+                                    Expiration: current_sector[5],
+                                    ReplaceCapacity: current_sector[6],
+                                    ReplaceSectorDeadline: current_sector[7],
+                                    ReplaceSectorNumber: current_sector[8],
+                                    ReplaceSectorPartition: current_sector[9],
+                                    SealProof: current_sector[0],
+                                    SealRandEpoch: current_sector[3],
+                                    SealedCID: current_sector[2],
+                                    SectorNumber: current_sector[1]
                                 }
 
                                 const sector_size = await get_sector_size(miner);
