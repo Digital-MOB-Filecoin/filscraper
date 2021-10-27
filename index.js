@@ -426,10 +426,10 @@ async function scrape(reprocess, check_for_missing_blocks) {
     }
 
     var scrape_start_time = new Date().getTime();
-    INFO(`[Scrape] reverse scrape from ${end_block} to ${start_block}`);
+    INFO(`[Scrape] scrape from ${start_block} to ${end_block}`);
 
     let blocks = [];
-    for (let i = end_block; i > start_block; i--) {
+    for (let i = start_block; i <= end_block; i++) {
         blocks.push(i);
     }
 
@@ -450,7 +450,7 @@ async function scrape(reprocess, check_for_missing_blocks) {
     var scrape_end_time = new Date().getTime();
     var duration = (scrape_end_time - scrape_start_time) / 1000;
 
-    INFO(`[Scrape] reverse scrape ${no_blocks} in ${duration} sec`);
+    INFO(`[Scrape] scrape ${no_blocks} in ${duration} sec`);
 }
 
 async function rescrape() {
