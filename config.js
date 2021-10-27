@@ -7,7 +7,8 @@ module.exports = {
       await_refresh_views: process.env.SCRAPER_AWAIT_REFRESH_VIEWS || 0,
       check_missing_blocks: process.env.SCRAPER_CHECK_MISSING_BLOCKS || 0,
       rescrape_missing_blocks: process.env.SCRAPER_RESCRAPE_MISSING_BLOCKS || 0,
-      rescrape_msg_cid: process.env.SCRAPER_RESCRAPE_MSG_CID || 0
+      rescrape_msg_cid: process.env.SCRAPER_RESCRAPE_MSG_CID || 0,
+      rescrape_msg_cid_filplus: process.env.SCRAPER_RESCRAPE_MSG_CID_FILPLUS || 0
     },
     database: {
         user: process.env.DB_USER || '',

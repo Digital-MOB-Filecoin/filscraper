@@ -553,6 +553,49 @@ async function rescrape_msg_cid() {
 }
 
 
+async function rescrape_msg_cid_filplus() {
+    INFO(`[RescrapeMsgCidFilPlus]`);
+
+    const { FILPLUS_CIDS } = require('./filplus-cids')
+   
+    let blocks_with_missing_cid = FILPLUS_CIDS.sort((a,b)=>b-a);
+
+    INFO(`[RescrapeMsgCidFilPlus] total blocks with missing cid: ${blocks_with_missing_cid.length}`);
+
+    let tipSetKey = null;
+    let tmpTipSetKey = null;
+
+    var blocksSlice = blocks_with_missing_cid;
+    while (blocksSlice.length) {
+        await Promise.all(blocksSlice.splice(0, SCRAPE_LIMIT).map(async (item) => {
+            try {
+                let block = parseInt(item);
+
+                INFO(`[RescrapeMsgCidFilPlus] ${block}`);
+                const result = await filecoinChainInfo.GetBlockMessagesByTipSet(block, tipSetKey);
+                if (result) {
+                    tmpTipSetKey = result.tipSetKey;
+
+                    if (result?.messages.length) {
+                        await db.save_messages_cids(result?.messages);
+                        await db.mark_block_with_msg_cid(block);
+                        INFO(`[RescrapeMsgCidFilPlus] ${block} done`);
+                    } else {
+                        ERROR(`[RescrapeMsgCidFilPlus] ${block} no messages`);
+                    }
+                } else {
+                    INFO(`[RescrapeMsgCidFilPlus] ${block} error: ${JSON.stringify(result)}`);
+                }
+            } catch (error) {
+                ERROR(`[RescrapeMsgCidFilPlus] ${item.block_with_missing_cid} error :`, error);
+            }
+        }));
+
+        tipSetKey = tmpTipSetKey;
+    }
+}
+
+
 async function filscraper_version() {
     INFO(`FilScraper version: ${version}`);
 };
@@ -592,6 +635,10 @@ const mainLoop = async _ => {
             setInterval(async () => {
                 await refresh_views();
             }, 12 * 3600 * 1000); // refresh every 12 hours
+        }
+
+        if (config.scraper.rescrape_msg_cid_filplus == 1) {
+            await rescrape_msg_cid_filplus();
         }
 
         while (!stop) {
