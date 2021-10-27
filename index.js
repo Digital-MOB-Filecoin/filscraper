@@ -485,7 +485,7 @@ async function rescrape() {
     } while (blocks && blocks?.length == SCRAPE_LIMIT);
 }
 
-async function rescrape_missing_blocks() {
+async function rescrape_missing_blocks(reprocess) {
     INFO(`[RescrapeMissingBlocks]`);
     const chainHead = await filecoinChainInfoInfura.GetChainHead();
     if (!chainHead) {
@@ -502,7 +502,7 @@ async function rescrape_missing_blocks() {
     while (blocksSlice.length) {
         await Promise.all(blocksSlice.splice(0, SCRAPE_LIMIT).map(async (item) => {
             try {
-                await scrape_block(parseInt(item.missing_block),'RescrapeMissingBlock', true, false);
+                await scrape_block(parseInt(item.missing_block),'RescrapeMissingBlock', true, reprocess);
             } catch (error) {
                 ERROR(`[RescrapeMissingBlocks] error :`);
                 console.error(error);
@@ -599,7 +599,7 @@ const mainLoop = async _ => {
                 await rescrape_msg_cid();
             }
             if (config.scraper.rescrape_missing_blocks == 1) {
-                await rescrape_missing_blocks();
+                await rescrape_missing_blocks(reprocess);
             }
             await scrape(reprocess, config.scraper.check_missing_blocks == 1);
             await rescrape();
