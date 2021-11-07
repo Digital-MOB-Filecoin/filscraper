@@ -13,6 +13,7 @@ const { decodeRLE2 } = require('./rle');
 const { hdiff } = require('./utils');
 
 const SCRAPE_LIMIT = 10 // blocks
+const INFURA_SCRAPE_LIMIT = 2 // blocks
 const INSERT_LIMIT = 100 // rows
 const RESCRAPE_INTERVAL = 24 // hours
 let last_rescrape = new Date(new Date().setHours(new Date().getHours() - 2));
@@ -418,7 +419,7 @@ async function scrape(reprocess, check_for_missing_blocks) {
         return;
     }
 
-    let start_block = 0;
+    let start_block = config.scraper.start;
     const end_block = chainHead - 1;
 
     if (!check_for_missing_blocks) {
@@ -435,9 +436,14 @@ async function scrape(reprocess, check_for_missing_blocks) {
 
     let no_blocks = blocks.length;
 
+    let scrape_limit = SCRAPE_LIMIT;
+    if (!reprocess) {
+        scrape_limit = INFURA_SCRAPE_LIMIT;
+    }
+
     var blocksSlice = blocks;
     while (blocksSlice.length) {
-        await Promise.all(blocksSlice.splice(0, SCRAPE_LIMIT).map(async (block) => {
+        await Promise.all(blocksSlice.splice(0, scrape_limit).map(async (block) => {
             try {
                 await scrape_block(block,'ScrapeBlock', false, reprocess);
             } catch (error) {
