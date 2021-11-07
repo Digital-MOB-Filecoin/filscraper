@@ -1,5 +1,4 @@
-DROP MATERIALIZED VIEW fil_miner_view_epochs CASCADE;
-CREATE MATERIALIZED VIEW IF NOT EXISTS fil_miner_view_epochs
+CREATE MATERIALIZED VIEW IF NOT EXISTS fil_miner_view_epochs_v2
 AS
 with
                     sector as(
@@ -26,9 +25,9 @@ select epoch,
                to_timestamp(1598281200 + epoch * 30) as timestamp
     from miners_data GROUP BY miner,commited,used,fraction,epoch,recovered,terminated,faults,size order by epoch;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_miner_view_epochs ON fil_miner_view_epochs(miner,epoch);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_miner_view_epochs_v2 ON fil_miner_view_epochs_v2(miner,epoch);
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS fil_miner_view_days
+CREATE MATERIALIZED VIEW IF NOT EXISTS fil_miner_view_days_v2
 AS
     SELECT
         miner,
@@ -52,9 +51,9 @@ AS
             ) q WHERE total > 0
 WITH DATA;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_miner_view_days ON fil_miner_view_days(miner,date);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_miner_view_days_v2 ON fil_miner_view_days_v2(miner,date);
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS fil_miners_view
+CREATE MATERIALIZED VIEW IF NOT EXISTS fil_miners_view_v2
 AS 
    SELECT miner,
        MAX(total) AS power,
@@ -63,4 +62,4 @@ AS
     GROUP BY miner order by power DESC
 WITH DATA;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_miners_view ON fil_miners_view(miner);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_miners_view_v2 ON fil_miners_view_v2(miner);
