@@ -3,11 +3,11 @@ AS
 select epoch,
         SUM(commited_per_epoch) as commited_per_epoch,
         SUM(used_per_epoch) as used_per_epoch,
-        ( SUM(used_per_epoch) / (SUM(NULLIF(commited_per_epoch,0)) + SUM(NULLIF(used_per_epoch,0))) ) as fraction_per_epoch,
+        COALESCE(( SUM(used_per_epoch) / (SUM(NULLIF(commited_per_epoch,0)) + SUM(NULLIF(used_per_epoch,0))) ),0) as fraction_per_epoch,
         ( (SUM(commited_per_epoch) + SUM(used_per_epoch)) / 1073741824) as total_per_epoch,
-        SUM(commited) as commited,
-        SUM(used) as used,
-        SUM(total) as total,
+        SUM(SUM(commited_per_epoch / 1073741824)) OVER(ORDER BY epoch) AS commited,
+        SUM(SUM(used_per_epoch / 1073741824)) OVER(ORDER BY epoch) AS used,
+        SUM(SUM((commited_per_epoch + used_per_epoch) / 1073741824)) OVER (ORDER BY epoch) AS total,
         to_timestamp(1598281200 + epoch * 30) as timestamp
     from fil_miner_view_epochs_v2 GROUP BY epoch order by epoch
 WITH DATA;
@@ -20,7 +20,7 @@ AS
         commited,
         used,
         total,
-        (used / NULLIF(total,0)) AS fraction,
+        COALESCE((used / NULLIF(total,0)),0) AS fraction,
         total_per_day,
         date::date AS date
         FROM(
