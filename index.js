@@ -628,10 +628,10 @@ const mainLoop = async _ => {
 
         INFO('Run migrations');
         await migrations.run();
+        await migrations.create_indexes();
         INFO('Run migrations, done');
 
         if (config.scraper.reprocess != 1 && config.scraper.lock_views != 1) {
-            await migrations.create_indexes();
             if (config.scraper.await_refresh_views != 1) {
                 refresh_views();
             } else {
