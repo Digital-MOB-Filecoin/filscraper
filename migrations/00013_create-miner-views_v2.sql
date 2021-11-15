@@ -1,29 +1,19 @@
 CREATE MATERIALIZED VIEW IF NOT EXISTS fil_miner_view_epochs_v2
 AS
-with
-                    sector as(
-                      SELECT miner, sector_size as size FROM fil_miners
-                    ),
-
-                    miner_events as (
-                        SELECT * FROM fil_miner_events
-                    ),
-
-                    miners_data as (select sector.size, miner_events.* from sector
-                    full outer join miner_events on sector.miner = miner_events.miner)
-
-select epoch,
+SELECT  epoch,
         miner,
-        (commited + (recovered - terminated - faults) * size) as commited_per_epoch,
+        activated,
+        terminated,
+        COALESCE((commited / NULLIF(activated,0)),0) as sector_size,
+        (commited - terminated * COALESCE((commited / NULLIF(activated,0)),0)) as commited_per_epoch,
         used as used_per_epoch,
         fraction as fraction_per_epoch,
-        (recovered - terminated - faults) * size as faults,
-        (((commited + (recovered - terminated - faults) * size) + used) / 1073741824) as total_per_epoch,
-        SUM(SUM((commited + (recovered - terminated - faults) * size) / 1073741824)) OVER (PARTITION BY miner ORDER BY epoch) AS commited,
+        (((commited - terminated * COALESCE((commited / NULLIF(activated,0)),0)) + used) / 1073741824) as total_per_epoch,
+        SUM(SUM((commited - terminated * COALESCE((commited / NULLIF(activated,0)),0)) / 1073741824)) OVER (PARTITION BY miner ORDER BY epoch) AS commited,
         SUM(SUM(used / 1073741824)) OVER (PARTITION BY miner ORDER BY epoch) AS used,
-        SUM(SUM(((commited + (recovered - terminated - faults) * size) + used) / 1073741824)) OVER (PARTITION BY miner ORDER BY epoch) AS total,
+        SUM(SUM(((commited - terminated * COALESCE((commited / NULLIF(activated,0)),0))+ used) / 1073741824)) OVER (PARTITION BY miner ORDER BY epoch) AS total,
                to_timestamp(1598281200 + epoch * 30) as timestamp
-    from miners_data GROUP BY miner,commited,used,fraction,epoch,recovered,terminated,faults,size order by epoch;
+FROM fil_miner_events GROUP BY miner,commited,used,fraction,epoch,activated,terminated order by epoch;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_miner_view_epochs_v2 ON fil_miner_view_epochs_v2(miner,epoch);
 
