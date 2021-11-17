@@ -107,14 +107,14 @@ class DB {
 
     async get_start_block() {
         const client = await this.pool.connect();
-        let block = config.scraper.start;
+        let block = 0;
         try {
             const result = await client.query(`\
         SELECT MAX(Block) \
         FROM fil_blocks `);
 
-            if (result?.rows[0]?.max && (result?.rows[0]?.max > block)) {
-                block = result?.rows[0]?.max;
+            if (result?.rows[0]?.max) {
+                block = parseInt(result?.rows[0]?.max);
             }
         } catch (err) {
             WARNING(`[GetMaxBlock] ${err}`)

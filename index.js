@@ -424,6 +424,10 @@ async function scrape(reprocess, check_for_missing_blocks) {
 
     if (!check_for_missing_blocks) {
         start_block = await db.get_start_block();
+
+        if ((end_block - start_block) > 1000) {
+            start_block = end_block - 1000;
+        }
     }
 
     var scrape_start_time = new Date().getTime();
@@ -445,7 +449,7 @@ async function scrape(reprocess, check_for_missing_blocks) {
     while (blocksSlice.length) {
         await Promise.all(blocksSlice.splice(0, scrape_limit).map(async (block) => {
             try {
-                await scrape_block(block,'ScrapeBlock', false, reprocess);
+                await scrape_block(block,'ScrapeBlock', check_for_missing_blocks, reprocess);
             } catch (error) {
                 ERROR(`[Scrape] error :`);
                 console.error(error);
