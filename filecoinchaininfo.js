@@ -73,13 +73,20 @@ class FilecoinChainInfo {
     }
 
     async GetChainHead() {
-        const chainHeadResponse = await this.lotus.ChainHead();
+        let height = undefined;
 
-        if (!this.CheckResponse('ChainHead', chainHeadResponse)) {
-            return undefined
+        try {
+            const chainHeadResponse = await this.lotus.ChainHead();
+
+            if (this.CheckResponse('ChainHead', chainHeadResponse)) {
+                height = chainHeadResponse.data.result.Height;
+            }
+
+        } catch (e) {
+            ERROR(`[GetChainHead] ${e}`);
         }
 
-        return chainHeadResponse.data.result.Height;
+        return height;
     }
 
     async GetBlockMessages(block) {
