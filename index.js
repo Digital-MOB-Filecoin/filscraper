@@ -419,7 +419,7 @@ async function scrape(reprocess, check_for_missing_blocks) {
         return;
     }
 
-    let start_block = config.scraper.start;
+    let start_block = parseInt(config.scraper.start);
     const end_block = chainHead - 1;
 
     if (!check_for_missing_blocks) {
