@@ -434,7 +434,7 @@ async function scrape(reprocess, check_for_missing_blocks) {
     INFO(`[Scrape] scrape from ${start_block} to ${end_block}`);
 
     let blocks = [];
-    for (let i = start_block; i <= end_block; i++) {
+    for (let i = start_block; i < end_block; i++) {
         blocks.push(i);
     }
 

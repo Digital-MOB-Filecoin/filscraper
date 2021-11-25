@@ -1,6 +1,6 @@
 {
   "name": "filscraper",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Filscraper",
   "main": "index.js",
   "scripts": {
