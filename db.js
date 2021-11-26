@@ -377,7 +377,6 @@ class DB {
         try {
             await client.query("\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_network_view_epochs WITH DATA;\
-            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_network_view_epochs_v2 WITH DATA;\
             ");
 
         } catch (err) {
@@ -391,7 +390,6 @@ class DB {
         try {
             await client.query("\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_network_view_days WITH DATA;\
-            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_network_view_days_v2 WITH DATA;\
             ");
 
         } catch (err) {
@@ -405,7 +403,6 @@ class DB {
         try {
             await client.query("\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_epochs WITH DATA;\
-            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_epochs_v2 WITH DATA;\
             ");
 
         } catch (err) {
@@ -419,7 +416,6 @@ class DB {
         try {
             await client.query("\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_days WITH DATA;\
-            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_days_v2 WITH DATA;\
             ");
 
         } catch (err) {
@@ -433,7 +429,6 @@ class DB {
         try {
             await client.query("\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_view WITH DATA;\
-            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_view_v2 WITH DATA;\
             ");
 
         } catch (err) {
