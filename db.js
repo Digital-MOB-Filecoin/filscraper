@@ -129,7 +129,7 @@ class DB {
         let rows = undefined;
         try {
             const result = await client.query(`\
-        SELECT block FROM fil_bad_blocks ORDER BY block LIMIT ${limit} OFFSET ${offset}`);
+        SELECT block FROM fil_bad_blocks WHERE block > 1200000 ORDER BY block LIMIT ${limit} OFFSET ${offset}`);
 
             if (result?.rows) {
                 rows = result?.rows;
