@@ -416,6 +416,7 @@ class DB {
         try {
             await client.query("\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_days WITH DATA;\
+            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_days_v3 WITH DATA;\
             ");
 
         } catch (err) {
