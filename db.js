@@ -2,10 +2,36 @@ const { Pool } = require("pg");
 const config = require('./config');
 const { INFO, ERROR, WARNING } = require('./logs');
 
+// Type parser to use for timestamp without time zone
+// This will keep node-pg from parsing the value into a Date object and give you the raw timestamp string instead.
+var types = require('pg').types;
+types.setTypeParser(1114, function(stringValue) {
+  return stringValue;
+})
+
+function FormatNull(t) {
+    if (JSON.stringify(t) == 'null') {
+        return t;
+    } else {
+        return '\'' + t + '\'';
+    }
+}
+
 class DB {
 
     constructor() {
         this.pool = new Pool(config.database);
+    }
+
+    async Query(query, log) {
+        let result = undefined;
+        try {
+            result = await this.pool.query(query);
+        } catch (err) {
+            WARNING(`[${log}] ${query} -> ${err}`)
+        }
+
+        return result;
     }
 
     async save_messages(msgs) {
@@ -428,6 +454,25 @@ class DB {
         client.release();
     }
 
+    async refresh_renewable_energy_views() {
+        const client = await this.pool.connect();
+        try {
+            await client.query("\
+            REFRESH MATERIALIZED VIEW fil_renewable_energy_from_transactions_view WITH DATA;\
+            ");
+            await client.query("\
+            REFRESH MATERIALIZED VIEW fil_renewable_energy_from_contracts_view WITH DATA;\
+            ");
+            await client.query("\
+            REFRESH MATERIALIZED VIEW fil_renewable_energy_view WITH DATA;\
+            ");
+
+        } catch (err) {
+            WARNING(`[RefreshRenewableEnergyMatViews] ${err}`)
+        }
+        client.release();
+    }
+
     async refresh_miners_view() {
         const client = await this.pool.connect();
         try {
@@ -480,6 +525,326 @@ class DB {
 
         return blocks_with_missing_cid;
     } 
+
+    async save_miner_renewable_energy(miner) {
+        try {
+            let values = `'${miner.id}', \
+                        '${miner.buyerId}',\
+                        ${FormatNull(miner.blockchainAddress)},\
+                        ${FormatNull(miner.createdAt)},\
+                        ${FormatNull(miner.updatedAt)},\
+                        ${miner.recsTotal}`;
+
+            await this.Query(`
+                UPDATE fil_renewable_energy_miners SET buyer_id='${miner.buyerId}', \
+                                 blockchain_address=${FormatNull(miner.blockchainAddress)}, \
+                                 created_at=${FormatNull(miner.createdAt)}, \
+                                 updated_at=${FormatNull(miner.updatedAt)}, \
+                                 recs_total='${miner.recsTotal}'\
+                    WHERE id='${miner.id}'; \
+                INSERT INTO fil_renewable_energy_miners (id, buyer_id, blockchain_address, created_at, updated_at, recs_total) \
+                    SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_miners WHERE id='${miner.id}');`,
+                    'SaveMinerRenewableEnergy');
+
+        } catch (err) {
+            WARNING(`[SaveMinerRenewableEnergy] -> ${err}`)
+        }
+    }
+
+    async save_transaction_renewable_energy(transaction) {
+        try {
+            let values = `'${transaction.id}', \
+                        '${transaction.miner_id}', \
+                        '${transaction.pageUrl}',\
+                        '${transaction.dataUrl}',\
+                        ${FormatNull(transaction.sellerId)},\
+                        '${transaction.reportingStart}',\
+                        ${transaction.reportingStartTimezoneOffset},\
+                        '${transaction.reportingEnd}',\
+                        ${transaction.reportingEndTimezoneOffset},\
+                        ${FormatNull(transaction.txHash)},\
+                        ${FormatNull(transaction.buyerId)},\
+                        ${FormatNull(transaction.contractId)},\
+                        ${FormatNull(transaction.createdAt)},\
+                        ${FormatNull(transaction.updatedAt)},\
+                        ${FormatNull(transaction.reportingStartLocal)},\
+                        ${FormatNull(transaction.reportingEndLocal)},\
+                        ${FormatNull(transaction.generation.id)},\
+                        ${FormatNull(transaction.generation.region)},\
+                        ${FormatNull(transaction.generation.country)},\
+                        ${FormatNull(transaction.generation.energySource)},\
+                        ${FormatNull(transaction.generation.productType)},\
+                        ${FormatNull(transaction.generation.generatorId)},\
+                        ${FormatNull(transaction.generation.generatorName)},\
+                        ${FormatNull(transaction.generation.generationStart)},\
+                        ${transaction.generation.generationStartTimezoneOffset},\
+                        ${FormatNull(transaction.generation.generationEnd)},\
+                        ${transaction.generation.generationEndTimezoneOffset},\
+                        ${FormatNull(transaction.generation.txHash)},\
+                        ${FormatNull(transaction.generation.initialSellerId)},\
+                        ${FormatNull(transaction.generation.beneficiary)},\
+                        ${FormatNull(transaction.generation.redemptionDate)},\
+                        ${FormatNull(transaction.generation.commissioningDate)},\
+                        ${FormatNull(transaction.generation.label)},\
+                        ${FormatNull(transaction.generation.createdAt)},\
+                        ${FormatNull(transaction.generation.updatedAt)},\
+                        ${transaction.generation.energyWh},\
+                        ${FormatNull(transaction.generation.generationStartLocal)},\
+                        ${FormatNull(transaction.generation.generationEndLocal)}`;
+                        
+
+            await this.Query(`
+                UPDATE fil_renewable_energy_transactions SET 
+                                 page_url='${transaction.pageUrl}',\
+                                 data_url='${transaction.dataUrl}',\
+                                 seller_id=${FormatNull(transaction.sellerId)},\
+                                 reporting_start='${transaction.reportingStart}',\
+                                 reporting_start_timezone_offset=${transaction.reportingStartTimezoneOffset},\
+                                 reporting_end='${transaction.reportingEnd}',\
+                                 reporting_end_timezone_offset=${transaction.reportingEndTimezoneOffset},\
+                                 tx_hash=${FormatNull(transaction.txHash)},\
+                                 buyer_id=${FormatNull(transaction.buyerId)},\
+                                 contract_id=${FormatNull(transaction.contractId)},\
+                                 created_at=${FormatNull(transaction.createdAt)},\
+                                 updated_at=${FormatNull(transaction.updatedAt)},\
+                                 reporting_start_local=${FormatNull(transaction.reportingStartLocal)},\
+                                 reporting_end_local=${FormatNull(transaction.reportingEndLocal)},\
+                                 gen_id=${FormatNull(transaction.generation.id)},\
+                                 gen_region=${FormatNull(transaction.generation.region)},\
+                                 gen_country=${FormatNull(transaction.generation.country)},\
+                                 gen_energy_source=${FormatNull(transaction.generation.energySource)},\
+                                 gen_product_type=${FormatNull(transaction.generation.productType)},\
+                                 gen_generator_id=${FormatNull(transaction.generation.generatorId)},\
+                                 gen_generator_name=${FormatNull(transaction.generation.generatorName)},\
+                                 gen_generation_start=${FormatNull(transaction.generation.generationStart)},\
+                                 gen_generation_start_timezone_offset=${transaction.generation.generationStartTimezoneOffset},\
+                                 gen_generation_end=${FormatNull(transaction.generation.generationEnd)},\
+                                 gen_generation_end_timezone_offset=${transaction.generation.generationEndTimezoneOffset},\
+                                 gen_tx_hash=${FormatNull(transaction.generation.txHash)},\
+                                 gen_initial_seller_id=${FormatNull(transaction.generation.initialSellerId)},\
+                                 gen_beneficiary=${FormatNull(transaction.generation.beneficiary)},\
+                                 gen_redemption_date=${FormatNull(transaction.generation.redemptionDate)},\
+                                 gen_commissioning_date=${FormatNull(transaction.generation.commissioningDate)},\
+                                 gen_label=${FormatNull(transaction.generation.label)},\
+                                 gen_created_at=${FormatNull(transaction.generation.createdAt)},\
+                                 gen_updated_at=${FormatNull(transaction.generation.updatedAt)},\
+                                 gen_energyWh=${transaction.generation.energyWh},\
+                                 gen_generation_start_local=${FormatNull(transaction.generation.generationStartLocal)},\
+                                 gen_generation_end_local=${FormatNull(transaction.generation.generationEndLocal)}\
+                    WHERE id='${transaction.id}'; \
+                INSERT INTO fil_renewable_energy_transactions ( \
+                    id, \
+                    miner_id, \
+                    page_url, \
+                    data_url, \
+                    seller_id, \
+                    reporting_start, \
+                    reporting_start_timezone_offset, \
+                    reporting_end, \
+                    reporting_end_timezone_offset, \
+                    tx_hash, \
+                    buyer_id, \
+                    contract_id, \
+                    created_at, \
+                    updated_at, \
+                    reporting_start_local, \
+                    reporting_end_local, \
+                    gen_id, \
+                    gen_region, \
+                    gen_country, \
+                    gen_energy_source, \
+                    gen_product_type, \
+                    gen_generator_id, \
+                    gen_generator_name, \
+                    gen_generation_start, \
+                    gen_generation_start_timezone_offset, \
+                    gen_generation_end, \
+                    gen_generation_end_timezone_offset, \
+                    gen_tx_hash, \
+                    gen_initial_seller_id, \
+                    gen_beneficiary, \
+                    gen_redemption_date, \
+                    gen_commissioning_date, \
+                    gen_label, \
+                    gen_created_at, \
+                    gen_updated_at, \
+                    gen_energyWh, \
+                    gen_generation_start_local, \
+                    gen_generation_end_local \
+                    ) \
+                    SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_transactions WHERE id='${transaction.id}');`,
+                    'SaveTransactionRenewableEnergy');
+
+        } catch (err) {
+            WARNING(`[SaveTransactionRenewableEnergy] -> ${err}`)
+        }
+    }
+
+    async save_renewable_energy_from_transactions(transaction) {
+        let id = transaction.id;
+        let miner = transaction.miner_id;
+        let totalEnergy = transaction.generation.energyWh;
+        let query = await this.Query(`SELECT t.date::text FROM generate_series(timestamp '${transaction.generation.generationStart}', timestamp '${transaction.generation.generationEnd}', interval  '1 day') AS t(date);`);
+        let data_points = query?.rows;
+
+        if (data_points && data_points?.length) {
+
+            for (let i = 0; i < data_points.length; i++) {
+                let processed_date = data_points[i].date?.split(' ')[0];
+                let data = {
+                    miner: miner,
+                    transaction_id: id,
+                    energyWh: totalEnergy / data_points.length,
+                    date: processed_date,
+                };
+
+                try {
+                    let values = `'${data.miner}', \
+                        '${data.transaction_id}', \
+                        '${data.date}',\
+                        '${data.energyWh}'`;
+
+                    await this.Query(`
+                UPDATE fil_renewable_energy_from_transactions SET 
+                                energyWh='${data.energyWh}'\
+                    WHERE miner='${data.miner}' AND transaction_id='${data.transaction_id}' AND date='${data.date}'; \
+                INSERT INTO fil_renewable_energy_from_transactions ( \
+                    miner, \
+                    transaction_id, \
+                    date, \
+                    energyWh \
+                    ) \
+                    SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_from_transactions WHERE miner='${data.miner}' AND transaction_id='${data.transaction_id}' AND date='${data.date}');`,
+                        'SaveRenewableEnergyFromTransactions');
+
+                } catch (err) {
+                    WARNING(`[SaveRenewableEnergyFromTransactions] -> ${err}`)
+                }
+
+            }
+        }
+    }
+
+    async save_contract_renewable_energy(contract) {
+        try {
+            let values = `'${contract.id}', \
+                        '${contract.miner_id}', \
+                        ${FormatNull(contract.productType)},\
+                        '${JSON.stringify(contract.energySources)}',\
+                        ${FormatNull(contract.contractDate)},\
+                        ${FormatNull(contract.deliveryDate)},\
+                        ${FormatNull(contract.reportingStart)},\
+                        ${FormatNull(contract.reportingEnd)},\
+                        '${JSON.stringify(contract.buyer)}',\
+                        '${JSON.stringify(contract.seller)}',\
+                        ${parseInt(contract.openVolume)},\
+                        ${parseInt(contract.deliveredVolume)},\
+                        '${JSON.stringify(contract.purchases)}',\
+                        ${contract.timezoneOffset},\
+                        '${JSON.stringify(contract.filecoinNode)}',\
+                        ${FormatNull(contract.externalId)},\
+                        ${FormatNull(contract.label)},\
+                        ${FormatNull(contract.createdAt)},\
+                        ${FormatNull(contract.updatedAt)},\
+                        '${JSON.stringify(contract.countryRegionMap)}'`;      
+
+            await this.Query(`
+                UPDATE fil_renewable_energy_contracts SET 
+                            product_type=${FormatNull(contract.productType)},\
+                            energy_sources='${JSON.stringify(contract.energySources)}',\
+                            contract_date=${FormatNull(contract.contractDate)},\
+                            delivery_date=${FormatNull(contract.deliveryDate)},\
+                            reporting_start=${FormatNull(contract.reportingStart)},\
+                            reporting_end=${FormatNull(contract.reportingEnd)},\
+                            buyer='${JSON.stringify(contract.buyer)}',\
+                            seller='${JSON.stringify(contract.seller)}',\
+                            open_volume=${parseInt(contract.openVolume)},\
+                            delivered_volume=${parseInt(contract.deliveredVolume)},\
+                            purchases='${JSON.stringify(contract.purchases)}',\
+                            timezone_offset=${contract.timezoneOffset},\
+                            filecoin_node='${JSON.stringify(contract.filecoinNode)}',\
+                            external_id=${FormatNull(contract.externalId)},\
+                            label=${FormatNull(contract.label)},\
+                            created_at=${FormatNull(contract.createdAt)},\
+                            updated_at=${FormatNull(contract.updatedAt)},\
+                            country_region_map='${JSON.stringify(contract.countryRegionMap)}'\   
+                    WHERE id='${contract.id}'; \
+                INSERT INTO fil_renewable_energy_contracts ( \
+                    id, \
+                    miner_id, \
+                    product_type, \
+                    energy_sources, \
+                    contract_date, \
+                    delivery_date, \
+                    reporting_start, \
+                    reporting_end, \
+                    buyer, \
+                    seller, \
+                    open_volume, \
+                    delivered_volume, \
+                    purchases, \
+                    timezone_offset, \
+                    filecoin_node, \
+                    external_id, \
+                    label, \
+                    created_at, \
+                    updated_at, \
+                    country_region_map \
+                    ) \
+                    SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_contracts WHERE id='${contract.id}');`,
+                    'SaveContractRenewableEnergy');
+
+        } catch (err) {
+            WARNING(`[SaveContractRenewableEnergy] -> ${err}`)
+        }
+    }
+
+    async save_renewable_energy_from_contracts(contract) {
+        let id = contract.id;
+        let miner = contract.miner_id;
+        let totalEnergy = contract.openVolume;
+        let query = await this.Query(`SELECT t.date::text FROM generate_series(timestamp '${contract.reportingStart}', timestamp '${contract.reportingEnd}', interval  '1 day') AS t(date);`);
+        let data_points = query?.rows;
+
+        //INFO(`[SaveRenewableEnergyFromContracts] for ${miner} contract.id: ${id} , openVolume: ${totalEnergy}`);
+
+        if (data_points && data_points?.length) {
+
+            for (let i = 0; i < data_points.length; i++) {
+                let processed_date = data_points[i].date?.split(' ')[0];
+                let data = {
+                    miner: miner,
+                    contract_id: id,
+                    energyWh: totalEnergy / data_points.length,
+                    date: processed_date,
+                };
+
+                try {
+                    let values = `'${data.miner}', \
+                        '${data.contract_id}', \
+                        '${data.date}',\
+                        '${data.energyWh}'`;
+
+                    await this.Query(`
+                UPDATE fil_renewable_energy_from_contracts SET 
+                                energyWh='${data.energyWh}'\
+                    WHERE miner='${data.miner}' AND contract_id='${data.contract_id}' AND date='${data.date}'; \
+                INSERT INTO fil_renewable_energy_from_contracts ( \
+                    miner, \
+                    contract_id, \
+                    date, \
+                    energyWh \
+                    ) \
+                    SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_from_contracts WHERE miner='${data.miner}' AND contract_id='${data.contract_id}' AND date='${data.date}');`,
+                        'SaveRenewableEnergyFromContracts');
+
+                } catch (err) {
+                    WARNING(`[SaveRenewableEnergyFromContracts] -> ${err}`)
+                }
+
+            }
+        }
+    }
 }
 
 module.exports = {

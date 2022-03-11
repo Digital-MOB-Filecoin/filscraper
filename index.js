@@ -11,6 +11,7 @@ const { DB } = require('./db');
 const { MinerMethods } = require('./miner-methods');
 const { decodeRLE2 } = require('./rle');
 const { hdiff } = require('./utils');
+const { ZeroLabsClient } = require('./zerolabs-client');
 
 const SCRAPE_LIMIT = 10 // blocks
 const INFURA_SCRAPE_LIMIT = 2 // blocks
@@ -21,6 +22,7 @@ let miner_sectors = new Map();
 
 let filecoinChainInfo = new FilecoinChainInfo(config.lotus.api, config.lotus.token);
 let filecoinChainInfoInfura = new FilecoinChainInfo(config.lotus.api_infura, 'token');
+let zeroLabsClient = new ZeroLabsClient(config.scraper.renewable_energy_api, config.scraper.renewable_energy_token);
 let lotus_infura = new Lotus(config.lotus.api_infura, 'token');
 let migrations = new Migrations();
 let db = new DB();
@@ -605,6 +607,55 @@ async function rescrape_msg_cid_filplus() {
     }
 }
 
+async function update_renewable_energy() {
+    //TODO scrape every 24 hours
+    //TODO update views every 24 hours
+
+    INFO('[UpdateRenewableEnergy] start');
+
+    let minersResponse = await zeroLabsClient.GetMiners();
+    if (minersResponse?.status == 200 && minersResponse?.data) {
+        miners = minersResponse.data;
+
+        for (const miner of miners) {
+            let transactionsResponse = await zeroLabsClient.GetTransactions(miner.id);
+            let contractsResponse = await zeroLabsClient.GetContracts(miner.id);
+
+            if (transactionsResponse?.status == 200 &&
+                contractsResponse?.status == 200 &&
+                transactionsResponse?.data &&
+                contractsResponse?.data) {
+
+                let transactions = transactionsResponse.data?.transactions;
+                let contracts = contractsResponse.data?.contracts;
+
+                let minerData = { ...miner, recsTotal: transactionsResponse.data?.recsTotal };
+
+                INFO(`[UpdateRenewableEnergy] for ${miner.id} , transactions: ${transactions.length} , contracts: ${contracts.length}`);
+                await db.save_miner_renewable_energy(minerData);
+
+                if (transactions?.length) {
+                    for (const transaction of transactions) {
+                        let transactionData = {...transaction, miner_id: miner.id};
+                        await db.save_renewable_energy_from_transactions(transactionData);
+                        await db.save_transaction_renewable_energy(transactionData);
+                    }
+                }
+
+                if (contracts?.length) {
+                    for (const contract of contracts) {
+                        let contractData = {...contract, miner_id: miner.id};
+                        await db.save_renewable_energy_from_contracts(contractData)
+                        await db.save_contract_renewable_energy(contractData);
+                    }
+                }
+            }
+        }
+    }
+
+    INFO('[UpdateRenewableEnergy] done');
+}
+
 
 async function filscraper_version() {
     INFO(`FilScraper version: ${version}`);
@@ -623,6 +674,7 @@ async function refresh_views() {
 }
 
 const mainLoop = async _ => {
+    let last_update_renewable_energy = 0;
     try {
         let reprocess = false;
         if (config.scraper.reprocess == 1) {
@@ -652,14 +704,21 @@ const mainLoop = async _ => {
         }
 
         while (!stop) {
-            if (config.scraper.rescrape_msg_cid == 1) {
+            let current_timestamp = Date.now();
+            if ((current_timestamp - last_update_renewable_energy) > 1 /*12*3600*1000*/) {
+                await update_renewable_energy();
+                await db.refresh_renewable_energy_views();
+                last_update_renewable_energy = current_timestamp;
+            }
+
+            /*if (config.scraper.rescrape_msg_cid == 1) {
                 await rescrape_msg_cid();
             }
             if (config.scraper.rescrape_missing_blocks == 1) {
                 await rescrape_missing_blocks(reprocess);
             }
             await scrape(reprocess, config.scraper.check_missing_blocks == 1);
-            await rescrape();
+            await rescrape();*/
 
             INFO(`Pause for 60 seconds`);
             await pause(60);

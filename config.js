@@ -8,7 +8,9 @@ module.exports = {
       check_missing_blocks: process.env.SCRAPER_CHECK_MISSING_BLOCKS || 0,
       rescrape_missing_blocks: process.env.SCRAPER_RESCRAPE_MISSING_BLOCKS || 0,
       rescrape_msg_cid: process.env.SCRAPER_RESCRAPE_MSG_CID || 0,
-      rescrape_msg_cid_filplus: process.env.SCRAPER_RESCRAPE_MSG_CID_FILPLUS || 0
+      rescrape_msg_cid_filplus: process.env.SCRAPER_RESCRAPE_MSG_CID_FILPLUS || 0,
+      renewable_energy_api: process.env.SCRAPER_RENEWABLE_ENERGY_API || '',
+      renewable_energy_token: process.env.SCRAPER_RENEWABLE_ENERGY_TOKEN || '',
     },
     database: {
         user: process.env.DB_USER || '',

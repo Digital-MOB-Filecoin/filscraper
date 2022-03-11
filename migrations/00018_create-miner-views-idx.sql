@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_fil_miner_view_days_v3 ON fil_miner_view_days_v3(miner,date);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_fil_miner_view_days_v4 ON fil_miner_view_days_v4(miner,date);
