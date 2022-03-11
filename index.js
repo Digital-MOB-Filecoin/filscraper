@@ -705,20 +705,20 @@ const mainLoop = async _ => {
 
         while (!stop) {
             let current_timestamp = Date.now();
-            if ((current_timestamp - last_update_renewable_energy) > 1 /*12*3600*1000*/) {
+            if ((current_timestamp - last_update_renewable_energy) > 12*3600*1000) {
                 await update_renewable_energy();
                 await db.refresh_renewable_energy_views();
                 last_update_renewable_energy = current_timestamp;
             }
 
-            /*if (config.scraper.rescrape_msg_cid == 1) {
+            if (config.scraper.rescrape_msg_cid == 1) {
                 await rescrape_msg_cid();
             }
             if (config.scraper.rescrape_missing_blocks == 1) {
                 await rescrape_missing_blocks(reprocess);
             }
             await scrape(reprocess, config.scraper.check_missing_blocks == 1);
-            await rescrape();*/
+            await rescrape();
 
             INFO(`Pause for 60 seconds`);
             await pause(60);
