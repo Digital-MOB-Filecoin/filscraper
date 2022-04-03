@@ -458,13 +458,13 @@ class DB {
         const client = await this.pool.connect();
         try {
             await client.query("\
-            REFRESH MATERIALIZED VIEW fil_renewable_energy_from_transactions_view_v2 WITH DATA;\
+            REFRESH MATERIALIZED VIEW fil_renewable_energy_from_transactions_view_v3 WITH DATA;\
             ");
             await client.query("\
-            REFRESH MATERIALIZED VIEW fil_renewable_energy_from_contracts_view_v2 WITH DATA;\
+            REFRESH MATERIALIZED VIEW fil_renewable_energy_from_contracts_view_v3 WITH DATA;\
             ");
             await client.query("\
-            REFRESH MATERIALIZED VIEW fil_renewable_energy_view_v2 WITH DATA;\
+            REFRESH MATERIALIZED VIEW fil_renewable_energy_view_v3 WITH DATA;\
             ");
 
         } catch (err) {
