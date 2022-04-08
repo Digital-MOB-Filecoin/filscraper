@@ -440,9 +440,9 @@ class DB {
     async refresh_miner_view_days() {
         const client = await this.pool.connect();
         try {
-            //fil_miner_view_days_v4 depends on fil_miner_view_days_v3
+            //fil_miner_view_days_v4 depends on fil_miners_view_v3
             await client.query("\
-            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_days_v3 WITH DATA;\
+            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_view_v3 WITH DATA;\
             ");
             await client.query("\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_days_v4 WITH DATA;\
