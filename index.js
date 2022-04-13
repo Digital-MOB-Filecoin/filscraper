@@ -673,6 +673,13 @@ async function refresh_views() {
     INFO('Refresh Views, done');
 }
 
+async function refresh_renewable_energy_views() {
+    INFO('Refresh Renewable Energy Views');
+    await db.refresh_renewable_energy_views();
+    await db.refresh_energy_ratio_views();
+    INFO('Refresh Renewable Energy Views, done');
+}
+
 const mainLoop = async _ => {
     let last_update_renewable_energy = 0;
     try {
@@ -707,7 +714,7 @@ const mainLoop = async _ => {
             let current_timestamp = Date.now();
             if ((current_timestamp - last_update_renewable_energy) > 12*3600*1000) {
                 await update_renewable_energy();
-                await db.refresh_renewable_energy_views();
+                refresh_renewable_energy_views();
                 last_update_renewable_energy = current_timestamp;
             }
 

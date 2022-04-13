@@ -454,6 +454,23 @@ class DB {
         client.release();
     }
 
+    async refresh_energy_ratio_views() {
+        const client = await this.pool.connect();
+        try {
+            //fil_renewable_energy_ratio_network_view depends on fil_renewable_energy_ratio_miner_view
+            await client.query("\
+            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_renewable_energy_ratio_miner_view WITH DATA;\
+            ");
+            await client.query("\
+            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_renewable_energy_ratio_network_view WITH DATA;\
+            ");
+
+        } catch (err) {
+            WARNING(`[RefreshEnergyRatioViews] ${err}`)
+        }
+        client.release();
+    }
+
     async refresh_renewable_energy_views() {
         const client = await this.pool.connect();
         try {
