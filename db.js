@@ -543,6 +543,16 @@ class DB {
         return blocks_with_missing_cid;
     } 
 
+    async reset_renewable_energy_data() {
+        await this.Query(`
+        TRUNCATE fil_renewable_energy_miners; \
+        TRUNCATE fil_renewable_energy_transactions; \
+        TRUNCATE fil_renewable_energy_contracts; \
+        TRUNCATE fil_renewable_energy_from_contracts; \
+        TRUNCATE fil_renewable_energy_from_transactions; \
+        `,'ResetRenewableEnergyData');
+    }
+
     async save_miner_renewable_energy(miner) {
         try {
             let values = `'${miner.id}', \

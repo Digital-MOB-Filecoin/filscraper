@@ -617,6 +617,12 @@ async function update_renewable_energy() {
     if (minersResponse?.status == 200 && minersResponse?.data) {
         miners = minersResponse.data;
 
+        if (miners.length > 0) {
+            INFO('[UpdateRenewableEnergy] reset renewable energy data');
+            await db.reset_renewable_energy_data();
+            INFO('[UpdateRenewableEnergy] reset renewable energy data, done');
+        }
+
         for (const miner of miners) {
             let transactionsResponse = await zeroLabsClient.GetTransactions(miner.id);
             let contractsResponse = await zeroLabsClient.GetContracts(miner.id);
@@ -714,7 +720,7 @@ const mainLoop = async _ => {
             let current_timestamp = Date.now();
             if ((current_timestamp - last_update_renewable_energy) > 12*3600*1000) {
                 await update_renewable_energy();
-                refresh_renewable_energy_views();
+                await refresh_renewable_energy_views();
                 last_update_renewable_energy = current_timestamp;
             }
 
