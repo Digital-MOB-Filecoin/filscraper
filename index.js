@@ -616,7 +616,7 @@ async function update_renewable_energy() {
     try {
         let minersResponse = await zeroLabsClient.GetMiners();
         if (minersResponse?.status == 200 && minersResponse?.data) {
-            miners = minersResponse.data;
+            miners = minersResponse.data.data;
 
             if (miners?.length > 0) {
                 INFO('[UpdateRenewableEnergy] reset renewable energy data');
