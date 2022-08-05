@@ -713,7 +713,7 @@ class DB {
     async save_renewable_energy_from_transactions(transaction) {
         let id = transaction.id;
         let miner = transaction.miner_id;
-        let totalEnergy = transaction.generation.energyWh;
+        let totalEnergy = transaction.recsSoldWh;
         let query = await this.Query(`SELECT t.date::text FROM generate_series(timestamp '${transaction.generation.generationStart}', timestamp '${transaction.generation.generationEnd}', interval  '1 day') AS t(date);`);
         let data_points = query?.rows;
 
