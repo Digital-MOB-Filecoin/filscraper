@@ -17,6 +17,14 @@ function FormatNull(t) {
     }
 }
 
+function FormatText(t) {
+    if (!t) {
+        return;
+    }
+
+    return t.replace(/'/g, "''");
+}
+
 class DB {
 
     constructor() {
@@ -874,6 +882,42 @@ class DB {
 
             }
         }
+    }
+
+    async location_get() {
+        let locations = [];
+
+        const result = await this.Query(`SELECT * FROM fil_miners_location`, 'LocationGet');
+        if (result?.rows) {
+            locations = result?.rows;
+        }
+
+        return locations;
+    }
+
+    async location_add(list) {
+        let values = '';
+        for (const item of list) {
+            values += `('${item.miner}', \
+                        ${item.lat},\
+                        ${item.long},\
+                        ${FormatNull(item.ba)},\
+                        ${FormatNull(item.region)},\
+                        ${FormatNull(item.country)},\
+                        ${FormatNull(FormatText(item.city))},\
+                        ${item.locations}),`;
+        }
+
+        values = values.slice(0, -1) + ';';
+
+
+        await this.Query(`\
+           INSERT INTO fil_miners_location (miner, lat, long, ba, region, country, city, locations) \
+           VALUES ${values}`, 'LocationAdd');
+    }
+
+    async location_delete(miner) {
+        await this.Query(`DELETE FROM fil_miners_location WHERE miner = '${miner}';`, 'LocationDelete');
     }
 }
 

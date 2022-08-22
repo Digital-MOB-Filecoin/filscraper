@@ -106,3 +106,5 @@ dist
 .vscode
 
 *-test.js
+
+wt-api-test.rest
