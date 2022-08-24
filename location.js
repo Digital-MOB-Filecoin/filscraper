@@ -118,7 +118,6 @@ class Location {
 
                     INFO(`[Location] unique locations ${unique_locations.size}`);
 
-                    await wt.login();
                     for (const [key, value] of unique_locations) {
                         let resp = await wt.get_ba(value.lat, value.long);
                         if (resp && resp.abbrev) {

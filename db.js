@@ -896,9 +896,10 @@ class DB {
     }
 
     async location_add(list) {
-        let values = '';
-        for (const item of list) {
-            values += `('${item.miner}', \
+        if (list.length) {
+            let values = '';
+            for (const item of list) {
+                values += `('${item.miner}', \
                         ${item.lat},\
                         ${item.long},\
                         ${FormatNull(item.ba)},\
@@ -906,18 +907,59 @@ class DB {
                         ${FormatNull(item.country)},\
                         ${FormatNull(FormatText(item.city))},\
                         ${item.locations}),`;
-        }
+            }
 
-        values = values.slice(0, -1) + ';';
+            values = values.slice(0, -1) + ';';
 
 
-        await this.Query(`\
+            await this.Query(`\
            INSERT INTO fil_miners_location (miner, lat, long, ba, region, country, city, locations) \
            VALUES ${values}`, 'LocationAdd');
+        }
     }
 
     async location_delete(miner) {
         await this.Query(`DELETE FROM fil_miners_location WHERE miner = '${miner}';`, 'LocationDelete');
+    }
+
+    async get_ba_list() {
+        let locations = [];
+
+        const result = await this.Query(`SELECT DISTINCT ba FROM fil_miners_location WHERE ba is not null;`, 'LocationGetBAList');
+        if (result?.rows) {
+            locations = result?.rows;
+        }
+
+        return locations;
+    }
+
+    async get_ba_start_date(ba) {
+        let start_date = [];
+
+        const result = await this.Query(`SELECT MAX(date) FROM fil_wt WHERE ba = '${ba}';`, 'LocationGetBAStartDate');
+        if (result?.rows) {
+            start_date = result?.rows[0].max;
+        }
+
+        return start_date;
+    }
+
+    async wt_data_add(list) {
+        if (list.length) {
+            let values = '';
+            for (const item of list) {
+                values += `('${item.ba}', \
+                        ${item.value},\
+                        '${item.date}'),`;
+            }
+
+            values = values.slice(0, -1) + ';';
+
+
+            await this.Query(`\
+           INSERT INTO fil_wt (ba, value, date) \
+           VALUES ${values}`, 'WTDataAdd');
+        }
     }
 }
 
