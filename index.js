@@ -12,6 +12,8 @@ const { MinerMethods } = require('./miner-methods');
 const { decodeRLE2 } = require('./rle');
 const { hdiff } = require('./utils');
 const { ZeroLabsClient } = require('./zerolabs-client');
+const { Location } = require('./location');
+const { WT } = require('./watttime');
 
 const SCRAPE_LIMIT = 10 // blocks
 const INFURA_SCRAPE_LIMIT = 2 // blocks
@@ -26,6 +28,8 @@ let zeroLabsClient = new ZeroLabsClient(config.scraper.renewable_energy_api, con
 let lotus_infura = new Lotus(config.lotus.api_infura, 'token');
 let migrations = new Migrations();
 let db = new DB();
+let location = new Location();
+let wt = new WT();
 let stop = false;
 
 function decode_sectors(buffer) {
@@ -694,6 +698,8 @@ async function refresh_renewable_energy_views() {
 
 const mainLoop = async _ => {
     let last_update_renewable_energy = 0;
+    let last_update_emissions = 0;
+
     try {
         let reprocess = false;
         if (config.scraper.reprocess == 1) {
@@ -724,6 +730,12 @@ const mainLoop = async _ => {
 
         while (!stop) {
             let current_timestamp = Date.now();
+            if ((current_timestamp - last_update_emissions) > 24*3600*1000) {
+                await location.update();
+                await wt.update();
+                await db.refresh_emissions_views();
+                last_update_emissions = current_timestamp
+            }
             if ((current_timestamp - last_update_renewable_energy) > 12*3600*1000) {
                 await update_renewable_energy();
                 await refresh_renewable_energy_views();

@@ -108,3 +108,5 @@ dist
 *-test.js
 
 wt-api-test.rest
+
+.DS_Store

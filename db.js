@@ -961,6 +961,18 @@ class DB {
            VALUES ${values}`, 'WTDataAdd');
         }
     }
+
+
+    async refresh_emissions_views() {
+        try {
+            await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_location_view WITH DATA;", 'RefreshEmissionsMatViews');
+            await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_wt_view WITH DATA;", 'RefreshEmissionsMatViews');
+            await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_un_view WITH DATA;", 'RefreshEmissionsMatViews');
+            await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_emissions_view WITH DATA;", 'RefreshEmissionsMatViews');
+        } catch (err) {
+            WARNING(`[RefreshEmissionsMatViews] ${err}`)
+        }
+    }
 }
 
 module.exports = {
