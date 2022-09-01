@@ -29,9 +29,9 @@ FROM fil_location_view
     GROUP BY miner,locations,date),
      capacity_data as (SELECT emissions_data.miner,
                               emissions_data.date,
-                              COALESCE(fil_miner_view_days.total_per_day, 0) as total_per_day
+                              COALESCE(fil_miner_view_days_v4.total_per_day, 0) as total_per_day
                         FROM emissions_data
-                        FULL JOIN fil_miner_view_days ON emissions_data.miner = fil_miner_view_days.miner AND emissions_data.date = fil_miner_view_days.date),
+                        FULL JOIN fil_miner_view_days_v4 ON emissions_data.miner = fil_miner_view_days_v4.miner AND emissions_data.date = fil_miner_view_days_v4.date),
     total_capacity_data as (SELECT capacity_data.miner,
                                    capacity_data.date,
                                    capacity_data.total_per_day,
