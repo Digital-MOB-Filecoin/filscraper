@@ -43,6 +43,12 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
+    - name: Echo IMAGE_TAG
+      env:
+        IMAGE_TAG: ${{ steps.vars.outputs.version }}
+      run: |
+        echo "Version to set in deployment manifests: ${IMAGE_TAG}"
+
     - name: Build, tag and push the image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -53,12 +59,6 @@ jobs:
           -t ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG} \
           ${GITHUB_WORKSPACE}
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}
-
-    - name: Echo IMAGE_TAG
-      env:
-        IMAGE_TAG: ${{ steps.vars.outputs.version }}
-      run: |
-        echo "Version to set in deployment manifests: ${IMAGE_TAG}"
 
     - name: Notify Slack success
       if: success()
