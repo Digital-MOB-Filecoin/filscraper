@@ -970,6 +970,7 @@ class DB {
             await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_un_view WITH DATA;", 'RefreshEmissionsMatViews');
             await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_emissions_view WITH DATA;", 'RefreshEmissionsMatViews');
             await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_data_view WITH DATA;", 'RefreshEmissionsMatViews');
+            await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_data_view_country WITH DATA;", 'RefreshEmissionsMatViews');
         } catch (err) {
             WARNING(`[RefreshEmissionsMatViews] ${err}`)
         }
