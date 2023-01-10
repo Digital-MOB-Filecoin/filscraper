@@ -6,7 +6,8 @@
   "scripts": {
     "start": "env-cmd node index.js",
     "api": "env-cmd node api.js",
-    "test-zerolabs": "env-cmd node zerolabs-client-test.js"
+    "test-zerolabs": "env-cmd node zerolabs-client-test.js",
+    "test-lily": "env-cmd node lily-client-test.js"
   },
   "repository": {
     "type": "git",

@@ -962,6 +962,35 @@ class DB {
         }
     }
 
+    async get_lily_start_date() {
+        let start_date = [];
+
+        const result = await this.Query(`SELECT MAX(date) FROM fil_miner_days_lily;`, 'LilyGetStartDate');
+        if (result?.rows) {
+            start_date = result?.rows[0].max;
+        }
+
+        return start_date;
+    }
+
+    async save_lily_data(data) {
+        let query = '';
+        for (let i = 0; i < data.length; i++) {
+            try {
+                let d = data[i];
+                let values = `'${d.miner_id}', \
+                            '${d.raw_byte_power}',\
+                            '${d.stat_date}'`;
+                query += `\
+                    INSERT INTO fil_miner_days_lily (miner, power, date) \
+                        SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_miner_days_lily WHERE miner='${d.miner_id}' AND date='${d.stat_date}');`;
+            } catch (err) {
+                WARNING(`[SaveLilyData] -> ${err}`)
+            }
+        }
+        await this.Query(query, 'SaveLilyData');
+    }
+
 
     async refresh_emissions_views() {
         try {

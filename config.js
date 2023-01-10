@@ -27,5 +27,10 @@ module.exports = {
       api_infura: process.env.LOTUS_API_INFURA || '',
       api: process.env.LOTUS_API || '',
       token: process.env.LOTUS_TOKEN || ''
+    },
+    lily: {
+      api: process.env.SPACESCOPE_API || '',
+      token: process.env.SPACESCOPE_TOKEN || '',
+      start_date: process.env.SPACESCOPE_START_DATE || ''
     }
   };

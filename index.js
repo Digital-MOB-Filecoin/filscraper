@@ -14,6 +14,7 @@ const { hdiff } = require('./utils');
 const { ZeroLabsClient } = require('./zerolabs-client');
 const { Location } = require('./location');
 const { WT } = require('./watttime');
+const { LilyClient } = require('./lily-client');
 
 const SCRAPE_LIMIT = 10 // blocks
 const INFURA_SCRAPE_LIMIT = 2 // blocks
@@ -30,6 +31,8 @@ let migrations = new Migrations();
 let db = new DB();
 let location = new Location();
 let wt = new WT();
+let lilyClient = new LilyClient(config.lily.api, config.lily.token, config.lily.start_date);
+
 let stop = false;
 
 function decode_sectors(buffer) {
@@ -731,10 +734,11 @@ const mainLoop = async _ => {
         while (!stop) {
             let current_timestamp = Date.now();
             if ((current_timestamp - last_update_emissions) > 24*3600*1000) {
+                await lilyClient.update();
                 await location.update();
                 await wt.update();
                 await db.refresh_emissions_views();
-                last_update_emissions = current_timestamp
+                last_update_emissions = current_timestamp;
             }
             if ((current_timestamp - last_update_renewable_energy) > 12*3600*1000) {
                 await update_renewable_energy();
