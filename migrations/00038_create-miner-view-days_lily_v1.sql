@@ -13,7 +13,7 @@ with
      data_points as ( SELECT miners.miner, dates.date FROM miners CROSS JOIN dates)
      SELECT data_points.miner,
             data_points.date,
-            COALESCE(capacity_data_lily.total_per_day, 0) as total,
+            COALESCE(capacity_data_lily.total, 0) as total,
             COALESCE(capacity_data_lily.total_per_day, 0) as total_per_day
     FROM data_points
     LEFT JOIN capacity_data_lily ON data_points.miner = capacity_data_lily.miner AND data_points.date = capacity_data_lily.date
