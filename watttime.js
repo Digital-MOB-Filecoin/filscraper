@@ -22,7 +22,8 @@ class WT {
                 auth: {
                     username: this.user,
                     password: this.password
-                }
+                },
+                timeout: 10000 //10 sec
             });
     
             this.token = response.data?.token;
@@ -38,7 +39,8 @@ class WT {
                 params: params,
                 headers: {
                     'Authorization': 'Bearer ' + this.token
-                }
+                },
+                timeout: 10000 //10 sec
             });
         } catch (err) {
             response = err?.response;

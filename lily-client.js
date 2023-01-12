@@ -19,10 +19,11 @@ class LilyClient {
                 response = await axios.get(url, {
                     headers: {
                         Authorization: `Bearer ${this.token}`,
-                    }
+                    },
+                    timeout: 10000 //10 sec
                 });
             } else {
-                response = await axios.get(url);
+                response = await axios.get(url, {timeout: 10000});
             }
     
         } catch (e) {

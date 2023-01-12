@@ -724,7 +724,7 @@ const mainLoop = async _ => {
             
             setInterval(async () => {
                 await refresh_views();
-            }, 12 * 3600 * 1000); // refresh every 12 hours
+            }, 24 * 3600 * 1000); // refresh every 24 hours
         }
 
         if (config.scraper.rescrape_msg_cid_filplus == 1) {
