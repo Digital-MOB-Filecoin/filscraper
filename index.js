@@ -700,7 +700,7 @@ async function refresh_renewable_energy_views() {
 }
 
 const mainLoop = async _ => {
-    let last_update_renewable_energy = 0;
+    let last_update_renewable_energy = Date.now();
     let last_update_emissions = Date.now();
 
     try {
