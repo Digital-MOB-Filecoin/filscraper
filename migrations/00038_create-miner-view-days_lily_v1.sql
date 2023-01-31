@@ -8,8 +8,8 @@ with
                             date
                             FROM
                             fil_miner_days_lily order by date),
-     miners as (SELECT miner as miner FROM fil_miners_view_v3),
-     dates as (SELECT date_trunc('day', dd)::date as date FROM generate_series('2020-10-15'::timestamp, NOW()::timestamp, '1 day'::interval) dd),
+     miners as (SELECT DISTINCT miner as miner FROM fil_miner_days_lily),
+     dates as (SELECT date_trunc('day', dd)::date as date FROM generate_series('2020-08-25'::timestamp, NOW()::timestamp, '1 day'::interval) dd),
      data_points as ( SELECT miners.miner, dates.date FROM miners CROSS JOIN dates)
      SELECT data_points.miner,
             data_points.date,

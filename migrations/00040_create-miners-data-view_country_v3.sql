@@ -4,19 +4,22 @@ with datapoints as (
                     SELECT
                         fil_emissions_view_v3.miner,
                         country,
-                        fil_emissions_view_v3.total,
-                        fil_emissions_view_v3.total_per_day,
-                        fil_emissions_view_v3.avg_un_value,
-                        fil_emissions_view_v3.avg_wt_value,
-                        fil_renewable_energy_view_v3.energywh as renewableEnergyWh,
+                        region,
+                        city,
+                        total,
+                        total_per_day,
+                        avg_un_value,
+                        avg_wt_value,
+                        energywh as renewableEnergyWh,
                         fil_emissions_view_v3.date
                     FROM fil_emissions_view_v3
                     left join fil_renewable_energy_view_v3 ON fil_renewable_energy_view_v3.miner = fil_emissions_view_v3.miner and fil_renewable_energy_view_v3.date = fil_emissions_view_v3.date
-                    left join fil_location_view ON fil_location_view.miner = fil_emissions_view_v3.miner
                 ),
                      data as (SELECT
                           miner,
                           country,
+                          region,
+                          city,
                           total,
                           total_per_day,
                           avg_un_value,
@@ -31,6 +34,8 @@ with datapoints as (
                                   date,
                                   miner,
                                   country,
+                                  region,
+                                  city,
                                   total,
                                   total_per_day,
                                   avg_un_value,
@@ -41,9 +46,9 @@ with datapoints as (
                                   ( ROUND( AVG(total) ) * 24 * 0.0000086973 + SUM(total_per_day) * 0.0601295421) * 1.93 AS energy_use_kW_upper
                               FROM datapoints
                               WHERE miner IS NOT NULL AND date IS NOT NULL
-                              GROUP BY miner,date, country, total, total_per_day, avg_wt_value, avg_un_value, renewableEnergyWh
+                              GROUP BY miner,date, country, region, city, total, total_per_day, avg_wt_value, avg_un_value, renewableEnergyWh
                        ) q)
 SELECT * FROM data ORDER BY date
 WITH DATA;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_miners_data_view_country_v3 ON fil_miners_data_view_country_v3(miner, country, date);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_miners_data_view_country_v3 ON fil_miners_data_view_country_v3(miner, date, country, region, city);
