@@ -733,7 +733,7 @@ const mainLoop = async _ => {
 
         while (!stop) {
             let current_timestamp = Date.now();
-            if ((current_timestamp - last_update_emissions) > 24*3600*1000) {
+            if ((current_timestamp - last_update_emissions) > 8*3600*1000) {
                 await lilyClient.update();
                 await location.update();
                 await wt.update();
