@@ -1,0 +1,1 @@
+ALTER TABLE fil_messages ALTER COLUMN "Method" TYPE bigint;
