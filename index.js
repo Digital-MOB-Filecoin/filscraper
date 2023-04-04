@@ -15,6 +15,7 @@ const { ZeroLabsClient } = require('./zerolabs-client');
 const { Location } = require('./location');
 const { WT } = require('./watttime');
 const { LilyClient } = require('./lily-client');
+const { FilinfoClient } = require('./filinfo-client');
 
 const SCRAPE_LIMIT = 10 // blocks
 const INFURA_SCRAPE_LIMIT = 2 // blocks
@@ -32,6 +33,7 @@ let db = new DB();
 let location = new Location();
 let wt = new WT();
 let lilyClient = new LilyClient(config.lily.api, config.lily.token, config.lily.start_date);
+let filinfoClient = new FilinfoClient(config.scraper.filinfo_api);
 
 let stop = false;
 
@@ -421,6 +423,41 @@ async function scrape_block(block, msg, rescrape, reprocess) {
     }
 }
 
+async function scrape_block_from_filinfo(block, msg) {
+    let scraped_from_db = false;
+    const found = await db.have_block(block);
+    if (found) {
+        //TODO: delete bad block mark if exists
+        INFO(`[${msg}] ${block} already scraped, skipping`);
+        return;
+    }
+
+    let messages = [];
+
+    const found_messages = await db.have_messages(block);
+    if (found_messages) {
+        INFO(`[${msg}] ${block} from db`);
+        messages = await db.get_messages(block);
+        scraped_from_db = true;
+    } else {
+        messages = await filinfoClient.getMessages(block);
+    }
+
+    if (messages && messages.length > 0) {
+        INFO(`[${msg}] ${block}, ${messages.length} messages`);
+        await db.save_block(block, messages.length, !scraped_from_db);
+        if (!scraped_from_db) {
+            await db.save_messages(messages);
+        }
+        await process_messages(block, messages);
+
+        INFO(`[${msg}] ${block} done`);
+    } else {
+        await db.save_bad_block(block)
+        WARNING(`[${msg}] ${block} mark as bad block`);
+    }
+}
+
 async function scrape(reprocess, check_for_missing_blocks) {
     const chainHead = await filecoinChainInfoInfura.GetChainHead();
     if (!chainHead) {
@@ -524,6 +561,34 @@ async function rescrape_missing_blocks(reprocess) {
                 await scrape_block(parseInt(item.missing_block),'RescrapeMissingBlock', true, reprocess);
             } catch (error) {
                 ERROR(`[RescrapeMissingBlocks] error :`);
+                console.error(error);
+            }
+        }));
+    }
+}
+
+async function rescrape_missing_blocks_from_filinfo() {
+    INFO(`[RescrapeMissingBlockFromFilinfo]`);
+    const chainHead = await filecoinChainInfoInfura.GetChainHead();
+    if (!chainHead) {
+        ERROR(`[RescrapeMissingBlockFromFilinfo] error : unable to get chain head`);
+        return;
+    }
+    const head = chainHead - 1;
+    const start = 2671000;
+
+    INFO(`[RescrapeMissingBlockFromFilinfo] from [${head}, ${start}]`);
+    
+    let missing_blocks = await db.get_missing_blocks(head, start);
+    INFO(`[RescrapeMissingBlockFromFilinfo] total missing blocks: ${missing_blocks.length}`);
+
+    var blocksSlice = missing_blocks;
+    while (blocksSlice.length) {
+        await Promise.all(blocksSlice.splice(0, SCRAPE_LIMIT).map(async (item) => {
+            try {
+                await scrape_block_from_filinfo(parseInt(item.missing_block),'RescrapeMissingBlockFromFilinfo');
+            } catch (error) {
+                ERROR(`[RescrapeMissingBlockFromFilinfo] error :`);
                 console.error(error);
             }
         }));
@@ -732,6 +797,8 @@ const mainLoop = async _ => {
         }
 
         while (!stop) {
+            await rescrape_missing_blocks_from_filinfo();
+
             let current_timestamp = Date.now();
             if ((current_timestamp - last_update_emissions) > 8*3600*1000) {
                 await lilyClient.update();
