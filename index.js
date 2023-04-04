@@ -577,9 +577,9 @@ async function rescrape_missing_blocks_from_filinfo() {
     const head = chainHead - 1;
     const start = 2671000;
 
-    INFO(`[RescrapeMissingBlockFromFilinfo] from [${head}, ${start}]`);
+    INFO(`[RescrapeMissingBlockFromFilinfo] from [${head - 10}, ${start}]`);
     
-    let missing_blocks = await db.get_missing_blocks(head, start);
+    let missing_blocks = await db.get_missing_blocks(head - 10, start);
     INFO(`[RescrapeMissingBlockFromFilinfo] total missing blocks: ${missing_blocks.length}`);
 
     var blocksSlice = missing_blocks;
