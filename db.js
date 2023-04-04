@@ -514,13 +514,13 @@ class DB {
         client.release();
     }
 
-    async get_missing_blocks(head) {
+    async get_missing_blocks(head, start = 0) {
         const client = await this.pool.connect();
         let missing_blocks = undefined;
         try {
             const result = await client.query(`\
             SELECT s.i AS missing_block \
-            FROM generate_series(${head}, 0, -1) s(i) \
+            FROM generate_series(${head}, ${start}, -1) s(i) \
             WHERE (NOT EXISTS (SELECT 1 FROM fil_blocks WHERE block = s.i)) AND \
             (NOT EXISTS (SELECT 1 FROM fil_bad_blocks WHERE block = s.i)); `);
 

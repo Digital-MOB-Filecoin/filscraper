@@ -15,6 +15,7 @@ module.exports = {
       wt_api: process.env.SCRAPER_WT_API || '',
       wt_user: process.env.SCRAPER_WT_USER || '',
       wt_password: process.env.SCRAPER_WT_PASSWORD || '',
+      filinfo_api: process.env.FILINFO_API || '',
     },
     database: {
         user: process.env.DB_USER || '',
