@@ -565,7 +565,7 @@ async function rescrape_missing_blocks_from_filinfo() {
 
     var blocksSlice = missing_blocks;
     while (blocksSlice.length) {
-        await Promise.all(blocksSlice.splice(0, SCRAPE_LIMIT).map(async (item) => {
+        await Promise.all(blocksSlice.splice(0, INFURA_SCRAPE_LIMIT).map(async (item) => {
             try {
                 await scrape_block_from_filinfo(parseInt(item.missing_block),'RescrapeMissingBlockFromFilinfo');
             } catch (error) {
@@ -730,8 +730,6 @@ const pause = (timeout) => new Promise(res => setTimeout(res, timeout * 1000));
 
 async function refresh_views() {
     INFO('Refresh Views');
-    //await db.refresh_network_view_epochs();
-    //await db.refresh_network_view_days();
     await db.refresh_miner_view_epochs();
     await db.refresh_miner_view_days();
     await db.refresh_miners_view();
