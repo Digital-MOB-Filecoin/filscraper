@@ -327,26 +327,7 @@ async function process_messages(block, messages) {
         }))
     }
 
-    let total = commited.add(used);
-
-    let fraction = new Big('0');
-
-    if (!total.isZero()) {
-        fraction = new Big(used.toString(10));
-        fraction = fraction.div(new Big(total.toString(10)));
-    }
-
-    let network_info = {
-        epoch: block, 
-        used: used, 
-        commited: commited,
-        total: total,
-        fraction: fraction
-    }
-
     INFO(`[ProcessBlock] ${block} sectors: ${sectors.length} , sector events: ${sectors_events.length} , miner events: ${miner_events.size} , deals ${deals.length}`);
-
-    await db.save_network(network_info);
 
     let sectorsSlice = sectors;
     while (sectorsSlice.length) {
@@ -749,8 +730,8 @@ const pause = (timeout) => new Promise(res => setTimeout(res, timeout * 1000));
 
 async function refresh_views() {
     INFO('Refresh Views');
-    await db.refresh_network_view_epochs();
-    await db.refresh_network_view_days();
+    //await db.refresh_network_view_epochs();
+    //await db.refresh_network_view_days();
     await db.refresh_miner_view_epochs();
     await db.refresh_miner_view_days();
     await db.refresh_miners_view();
