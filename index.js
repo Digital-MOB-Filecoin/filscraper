@@ -398,10 +398,12 @@ async function scrape_block(block, msg, rescrape, reprocess) {
         await process_messages(block, messages);
 
         INFO(`[${msg}] ${block} done`);
-    } else {
+    } 
+    // scrape_block_from_filinfo will mark as bad block
+    /*else {
         await db.save_bad_block(block)
         WARNING(`[${msg}] ${block} mark as bad block`);
-    }
+    }*/
 }
 
 async function scrape_block_from_filinfo(block, msg) {
@@ -428,7 +430,7 @@ async function scrape_block_from_filinfo(block, msg) {
         INFO(`[${msg}] ${block}, ${messages.length} messages`);
         await db.save_block(block, messages.length, !scraped_from_db);
         if (!scraped_from_db) {
-            await db.save_messages(messages);
+            await db.save_messages(messages, true);
         }
         await process_messages(block, messages);
 

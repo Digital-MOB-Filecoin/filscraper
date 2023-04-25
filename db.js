@@ -42,7 +42,7 @@ class DB {
         return result;
     }
 
-    async save_messages(msgs) {
+    async save_messages(msgs, from_filinfo = false) {
         const client = await this.pool.connect();
 
         for (let i = 0; i < msgs.length; i++) {
@@ -53,7 +53,7 @@ class DB {
 
                 await client.query(`\
         INSERT INTO fil_messages (\"CID\", \"Block\", \"From\", \"To\", \"Nonce\", \"Value\", \"GasLimit\", \"GasFeeCap\", \"GasPremium\", \"Method\", \"Params\", \"ExitCode\", \"Return\", \"GasUsed\", \"Version\", \"Cid\") \
-        VALUES ('${msgCid}', \
+        VALUES ('${from_filinfo ? msg.CID : msgCid}', \
         '${msg.Block}', \
         '${msg.From}', \
         '${msg.To}', \
@@ -68,7 +68,7 @@ class DB {
         '${msg.Return}', \
         '${msg.GasUsed}', \
         '${msg.Version}',
-        '${msgCid2}') \
+        '${from_filinfo ? msg.Cid : msgCid2}') \
 `);
 
             } catch (err) {
@@ -521,7 +521,8 @@ class DB {
             const result = await client.query(`\
             SELECT s.i AS missing_block \
             FROM generate_series(${head}, ${start}, -1) s(i) \
-            WHERE (NOT EXISTS (SELECT 1 FROM fil_blocks WHERE block = s.i));`);
+            WHERE (NOT EXISTS (SELECT 1 FROM fil_blocks WHERE block = s.i)) AND \
+            (NOT EXISTS (SELECT 1 FROM fil_bad_blocks WHERE block = s.i)); `);
 
             if (result?.rows) {
                 missing_blocks = result?.rows;
