@@ -778,7 +778,7 @@ const mainLoop = async _ => {
         }
 
         while (!stop) {
-            await rescrape_missing_blocks_from_filinfo();
+            //await rescrape_missing_blocks_from_filinfo();
 
             let current_timestamp = Date.now();
             if ((current_timestamp - last_update_emissions) > 8*3600*1000) {
