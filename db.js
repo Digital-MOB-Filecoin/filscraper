@@ -628,7 +628,9 @@ class DB {
                         ${FormatNull(transaction.generation.updatedAt)},\
                         ${transaction.generation.energyWh},\
                         ${FormatNull(transaction.generation.generationStartLocal)},\
-                        ${FormatNull(transaction.generation.generationEndLocal)}`;
+                        ${FormatNull(transaction.generation.generationEndLocal)},\
+                        '${JSON.stringify(transaction.generation)}',\
+                        ${FormatNull(transaction.generation.country)}`;
                         
 
             await this.Query(`
@@ -668,7 +670,9 @@ class DB {
                                  gen_updated_at=${FormatNull(transaction.generation.updatedAt)},\
                                  gen_energyWh=${transaction.generation.energyWh},\
                                  gen_generation_start_local=${FormatNull(transaction.generation.generationStartLocal)},\
-                                 gen_generation_end_local=${FormatNull(transaction.generation.generationEndLocal)}\
+                                 gen_generation_end_local=${FormatNull(transaction.generation.generationEndLocal)},\
+                                 generation='${JSON.stringify(transaction.generation)}',\
+                                 country=${FormatNull(transaction.generation.country)}\
                     WHERE id='${transaction.id}'; \
                 INSERT INTO fil_renewable_energy_transactions ( \
                     id, \
@@ -708,7 +712,9 @@ class DB {
                     gen_updated_at, \
                     gen_energyWh, \
                     gen_generation_start_local, \
-                    gen_generation_end_local \
+                    gen_generation_end_local, \
+                    generation, \
+                    country \
                     ) \
                     SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_transactions WHERE id='${transaction.id}');`,
                     'SaveTransactionRenewableEnergy');
@@ -784,7 +790,8 @@ class DB {
                         ${FormatNull(contract.label)},\
                         ${FormatNull(contract.createdAt)},\
                         ${FormatNull(contract.updatedAt)},\
-                        '${JSON.stringify(contract.countryRegionMap)}'`;      
+                        '${JSON.stringify(contract.countryRegionMap)}',\
+                        ${FormatNull(contract.countryRegionMap[0]?.country)}`;      
 
             await this.Query(`
                 UPDATE fil_renewable_energy_contracts SET 
@@ -805,7 +812,8 @@ class DB {
                             label=${FormatNull(contract.label)},\
                             created_at=${FormatNull(contract.createdAt)},\
                             updated_at=${FormatNull(contract.updatedAt)},\
-                            country_region_map='${JSON.stringify(contract.countryRegionMap)}'\   
+                            country_region_map='${JSON.stringify(contract.countryRegionMap)}',\
+                            country=${FormatNull(contract.countryRegionMap[0]?.country)}\
                     WHERE id='${contract.id}'; \
                 INSERT INTO fil_renewable_energy_contracts ( \
                     id, \
@@ -827,7 +835,8 @@ class DB {
                     label, \
                     created_at, \
                     updated_at, \
-                    country_region_map \
+                    country_region_map, \
+                    country \
                     ) \
                     SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_contracts WHERE id='${contract.id}');`,
                     'SaveContractRenewableEnergy');
