@@ -486,13 +486,13 @@ class DB {
         const client = await this.pool.connect();
         try {
             await client.query("\
-            REFRESH MATERIALIZED VIEW fil_renewable_energy_from_transactions_view_v3 WITH DATA;\
+            REFRESH MATERIALIZED VIEW fil_renewable_energy_from_transactions_view_v4 WITH DATA;\
             ");
             await client.query("\
-            REFRESH MATERIALIZED VIEW fil_renewable_energy_from_contracts_view_v3 WITH DATA;\
+            REFRESH MATERIALIZED VIEW fil_renewable_energy_from_contracts_view_v4 WITH DATA;\
             ");
             await client.query("\
-            REFRESH MATERIALIZED VIEW fil_renewable_energy_view_v3 WITH DATA;\
+            REFRESH MATERIALIZED VIEW fil_renewable_energy_view_v4 WITH DATA;\
             ");
 
         } catch (err) {
@@ -730,6 +730,7 @@ class DB {
         let totalEnergy = transaction.recsSoldWh;
         let query = await this.Query(`SELECT t.date::text FROM generate_series(timestamp '${transaction.generation.generationStart}', timestamp '${transaction.generation.generationEnd}', interval  '1 day') AS t(date);`);
         let data_points = query?.rows;
+        let country = FormatNull(transaction.generation.country);
 
         if (data_points && data_points?.length) {
 
@@ -740,25 +741,28 @@ class DB {
                     transaction_id: id,
                     energyWh: totalEnergy / data_points.length,
                     date: processed_date,
+                    country: country,
                 };
 
                 try {
                     let values = `'${data.miner}', \
                         '${data.transaction_id}', \
                         '${data.date}',\
-                        '${data.energyWh}'`;
+                        '${data.energyWh}',\
+                         ${data.country}`;
 
                     await this.Query(`
                 UPDATE fil_renewable_energy_from_transactions SET 
                                 energyWh='${data.energyWh}'\
-                    WHERE miner='${data.miner}' AND transaction_id='${data.transaction_id}' AND date='${data.date}'; \
+                    WHERE miner='${data.miner}' AND transaction_id='${data.transaction_id}' AND date='${data.date}' AND country=${data.country}; \
                 INSERT INTO fil_renewable_energy_from_transactions ( \
                     miner, \
                     transaction_id, \
                     date, \
-                    energyWh \
+                    energyWh, \
+                    country \
                     ) \
-                    SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_from_transactions WHERE miner='${data.miner}' AND transaction_id='${data.transaction_id}' AND date='${data.date}');`,
+                    SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_from_transactions WHERE miner='${data.miner}' AND transaction_id='${data.transaction_id}' AND date='${data.date}' AND country=${data.country});`,
                         'SaveRenewableEnergyFromTransactions');
 
                 } catch (err) {
@@ -852,11 +856,11 @@ class DB {
         let totalEnergy = contract.openVolume;
         let query = await this.Query(`SELECT t.date::text FROM generate_series(timestamp '${contract.reportingStart}', timestamp '${contract.reportingEnd}', interval  '1 day') AS t(date);`);
         let data_points = query?.rows;
+        let country = FormatNull(contract.countryRegionMap[0]?.country);
 
         //INFO(`[SaveRenewableEnergyFromContracts] for ${miner} contract.id: ${id} , openVolume: ${totalEnergy}`);
 
         if (data_points && data_points?.length) {
-
             for (let i = 0; i < data_points.length; i++) {
                 let processed_date = data_points[i].date?.split(' ')[0];
                 let data = {
@@ -864,25 +868,28 @@ class DB {
                     contract_id: id,
                     energyWh: totalEnergy / data_points.length,
                     date: processed_date,
+                    country: country,
                 };
 
                 try {
                     let values = `'${data.miner}', \
                         '${data.contract_id}', \
                         '${data.date}',\
-                        '${data.energyWh}'`;
+                        '${data.energyWh}',\
+                         ${data.country}`;
 
                     await this.Query(`
                 UPDATE fil_renewable_energy_from_contracts SET 
                                 energyWh='${data.energyWh}'\
-                    WHERE miner='${data.miner}' AND contract_id='${data.contract_id}' AND date='${data.date}'; \
+                    WHERE miner='${data.miner}' AND contract_id='${data.contract_id}' AND date='${data.date}' AND country=${data.country}; \
                 INSERT INTO fil_renewable_energy_from_contracts ( \
                     miner, \
                     contract_id, \
                     date, \
-                    energyWh \
+                    energyWh, \
+                    country \
                     ) \
-                    SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_from_contracts WHERE miner='${data.miner}' AND contract_id='${data.contract_id}' AND date='${data.date}');`,
+                    SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_from_contracts WHERE miner='${data.miner}' AND contract_id='${data.contract_id}' AND date='${data.date}'  AND country=${data.country});`,
                         'SaveRenewableEnergyFromContracts');
 
                 } catch (err) {
@@ -1009,7 +1016,7 @@ class DB {
             await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_un_view WITH DATA;", 'RefreshEmissionsMatViews');
             await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_days_lily_v1 WITH DATA;", 'RefreshEmissionsMatViews');
             await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_emissions_view_v3 WITH DATA;", 'RefreshEmissionsMatViews');
-            await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_data_view_country_v3 WITH DATA;", 'RefreshEmissionsMatViews');
+            await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_data_view_country_v4 WITH DATA;", 'RefreshEmissionsMatViews');
             await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_map_view_v2 WITH DATA;", 'RefreshEmissionsMatViews');
         } catch (err) {
             WARNING(`[RefreshEmissionsMatViews] ${err}`)
