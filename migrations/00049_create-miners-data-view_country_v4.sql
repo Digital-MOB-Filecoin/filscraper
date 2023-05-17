@@ -2,18 +2,28 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS fil_miners_data_view_country_v4
 AS
 with datapoints as (
                     SELECT
-                        fil_emissions_view_v3.miner,
-                        fil_renewable_energy_view_v4.country as country,
+                        fil_emissions_view_v4.miner,
+                        fil_emissions_view_v4.country AS country,
                         region,
                         city,
                         total,
                         total_per_day,
                         avg_un_value,
                         avg_wt_value,
-                        energywh as renewableEnergyWh,
-                        fil_emissions_view_v3.date
-                    FROM fil_emissions_view_v3
-                    left join fil_renewable_energy_view_v4 ON fil_renewable_energy_view_v4.miner = fil_emissions_view_v3.miner and fil_renewable_energy_view_v4.date = fil_emissions_view_v3.date and fil_renewable_energy_view_v4.country = fil_emissions_view_v3.country
+                        COALESCE(fil_renewable_energy_view_v4.energyWh / COALESCE(location_count.count, 1), 0) AS renewableEnergyWh,
+                        fil_emissions_view_v4.date
+                    FROM fil_emissions_view_v4
+                    LEFT JOIN fil_renewable_energy_view_v4
+                    ON fil_renewable_energy_view_v4.miner = fil_emissions_view_v4.miner
+                    AND fil_renewable_energy_view_v4.date = fil_emissions_view_v4.date
+                    AND fil_renewable_energy_view_v4.country = fil_emissions_view_v4.country
+                    LEFT JOIN (
+                        SELECT miner, country, COUNT(DISTINCT city) AS count
+                        FROM fil_emissions_view_v4
+                        GROUP BY miner, country
+                    ) AS location_count
+                    ON fil_emissions_view_v4.miner = location_count.miner
+                    AND fil_emissions_view_v4.country = location_count.country
                 ),
                      data as (SELECT
                           miner,
