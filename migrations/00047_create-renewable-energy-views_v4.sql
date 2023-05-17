@@ -47,6 +47,6 @@ WITH DATA;
 
 
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_fil_renewable_energy_from_transactions_view_v4 ON fil_renewable_energy_from_transactions_view_v4(id, miner, date, country);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_fil_renewable_energy_from_contracts_view_v4 ON fil_renewable_energy_from_contracts_view_v4(id, miner, date, country);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_fil_renewable_energy_from_transactions_view_v4 ON fil_renewable_energy_from_transactions_view_v4(miner, date, country);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_fil_renewable_energy_from_contracts_view_v4 ON fil_renewable_energy_from_contracts_view_v4(miner, date, country);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_fil_renewable_energy_view_v4 ON fil_renewable_energy_view_v4(miner, date, country);
