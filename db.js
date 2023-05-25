@@ -728,7 +728,17 @@ class DB {
         let id = transaction.id;
         let miner = transaction.miner_id;
         let totalEnergy = transaction.recsSoldWh;
-        let query = await this.Query(`SELECT t.date::text FROM generate_series(timestamp '${transaction.generation.generationStart}', timestamp '${transaction.generation.generationEnd}', interval  '1 day') AS t(date);`);
+
+        let start = transaction.generation.generationStart;
+        let date1 = new Date(transaction.generation.generationStart);
+        let date2 = new Date('2020-08-25');
+
+        if (date1 < date2) {
+            console.log('save_renewable_energy_from_transactions generationStart', transaction.generation.generationStart);
+            start = '2020-08-25';
+        }
+
+        let query = await this.Query(`SELECT t.date::text FROM generate_series(timestamp '${start}', timestamp '${transaction.generation.generationEnd}', interval  '1 day') AS t(date);`);
         let data_points = query?.rows;
         let country = FormatNull(transaction.generation.country);
 
@@ -854,6 +864,16 @@ class DB {
         let id = contract.id;
         let miner = contract.miner_id;
         let totalEnergy = contract.openVolume;
+
+        let start = contract.reportingStart;
+        let date1 = new Date(contract.reportingStart);
+        let date2 = new Date('2020-08-25');
+
+        if (date1 < date2) {
+            console.log('save_renewable_energy_from_contracts reportingStart', contract.reportingStart);
+            start = '2020-08-25';
+        }
+
         let query = await this.Query(`SELECT t.date::text FROM generate_series(timestamp '${contract.reportingStart}', timestamp '${contract.reportingEnd}', interval  '1 day') AS t(date);`);
         let data_points = query?.rows;
         let country = FormatNull(contract.countryRegionMap[0]?.country);
