@@ -10,7 +10,7 @@ with data as (SELECT
        fil_un_view.value as un_value
 FROM fil_location_view
     LEFT JOIN fil_un_view ON fil_location_view.country = fil_un_view.country),
-    dates as (SELECT date_trunc('day', dd)::date as date FROM generate_series('2020-01-01'::timestamp, NOW()::timestamp, '1 day'::interval) dd),
+    dates as (SELECT date_trunc('day', dd)::date as date FROM generate_series('2020-08-25'::timestamp, NOW()::timestamp, '1 day'::interval) dd),
     data_points as ( SELECT data.miner, data.ba, data.country, data.region, data.city, data.locations, data.un_value, dates.date FROM data CROSS JOIN dates),
     capacity_data as ( SELECT
        data_points.miner,
