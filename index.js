@@ -788,11 +788,11 @@ const mainLoop = async _ => {
                 await db.refresh_emissions_views();
                 last_update_emissions = current_timestamp;
             }
-            if ((current_timestamp - last_update_renewable_energy) > 12*3600*1000) {
+            /*if ((current_timestamp - last_update_renewable_energy) > 12*3600*1000) {
                 await update_renewable_energy();
                 await refresh_renewable_energy_views();
                 last_update_renewable_energy = current_timestamp;
-            }
+            }*/
 
             if (config.scraper.rescrape_msg_cid == 1) {
                 await rescrape_msg_cid();
