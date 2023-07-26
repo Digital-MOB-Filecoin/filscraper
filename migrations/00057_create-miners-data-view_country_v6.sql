@@ -62,4 +62,4 @@ SELECT
 SELECT * FROM data ORDER BY date
 WITH DATA;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_miners_data_view_country_v6 ON fil_miners_data_view_country_v6(miner, date, country, region, city);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fil_miners_data_view_country_v6 ON fil_miners_data_view_country_v6(miner, date, country, region, city, renewable_energy_kW);
