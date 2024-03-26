@@ -25,23 +25,24 @@ class Lotus {
 
         let response;
 
-        if (this.token) {
-            response = await axios.post(this.api, body, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.token}`
-                },
-                timeout: timeout
-            });
-
-        } else {
+        console.log('LOTUS API TOKEN', this.token)
+        // if (this.token) {
+        //     response = await axios.post(this.api, body, {
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //             'Authorization': `Bearer ${this.token}`
+        //         },
+        //         timeout: timeout
+        //     });
+        //
+        // } else {
             response = await axios.post(this.api, body, {
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 timeout: timeout
             });
-        }
+        // }
 
         return response;
     }
