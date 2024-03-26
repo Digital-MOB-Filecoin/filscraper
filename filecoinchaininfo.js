@@ -83,6 +83,7 @@ class FilecoinChainInfo {
             }
 
         } catch (e) {
+            console.error(e);
             ERROR(`[GetChainHead] ${e}`);
         }
 
