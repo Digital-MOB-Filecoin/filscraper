@@ -25,7 +25,7 @@ let last_rescrape = new Date(new Date().setHours(new Date().getHours() - 2));
 let miner_sectors = new Map();
 
 let filecoinChainInfo = new FilecoinChainInfo(config.lotus.api, config.lotus.token);
-let filecoinChainInfoInfura = new FilecoinChainInfo(config.lotus.api_infura, 'token');
+let filecoinChainInfoInfura = new FilecoinChainInfo(config.lotus.api_infura, config.lotus.token);
 let zeroLabsClient = new ZeroLabsClient(config.scraper.renewable_energy_api, config.scraper.renewable_energy_token);
 let lotus_infura = new Lotus(config.lotus.api_infura, 'token');
 let migrations = new Migrations();

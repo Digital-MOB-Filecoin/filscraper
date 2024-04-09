@@ -26,7 +26,7 @@ class Lotus {
         let response;
 
         console.log('LOTUS API TOKEN:', this.token, "LENGTH:", this.token?.length)
-        if (this.token && this.token !== 'token') {
+        // if (this.token && this.token !== 'token') {
             response = await axios.post(this.api, body, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -35,14 +35,14 @@ class Lotus {
                 timeout: timeout
             });
 
-        } else {
-            response = await axios.post(this.api, body, {
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                timeout: timeout
-            });
-        }
+        // } else {
+        //     response = await axios.post(this.api, body, {
+        //         headers: {
+        //             'Content-Type': 'application/json'
+        //         },
+        //         timeout: timeout
+        //     });
+        // }
 
         return response;
     }
