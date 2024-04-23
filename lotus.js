@@ -25,7 +25,6 @@ class Lotus {
 
         let response;
 
-        console.log('LOTUS API TOKEN:', this.token, "LENGTH:", this.token?.length)
         if (this.token) {
             response = await axios.post(this.api, body, {
                 headers: {

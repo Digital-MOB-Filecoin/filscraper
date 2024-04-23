@@ -27,7 +27,7 @@ let miner_sectors = new Map();
 let filecoinChainInfo = new FilecoinChainInfo(config.lotus.api, config.lotus.token);
 let filecoinChainInfoInfura = new FilecoinChainInfo(config.lotus.api_infura, config.lotus.token);
 let zeroLabsClient = new ZeroLabsClient(config.scraper.renewable_energy_api, config.scraper.renewable_energy_token);
-let lotus_infura = new Lotus(config.lotus.api_infura, 'token');
+let lotus_infura = new Lotus(config.lotus.api_infura,  config.lotus.token);
 let migrations = new Migrations();
 let db = new DB();
 let location = new Location();
@@ -185,17 +185,14 @@ async function process_messages(block, messages) {
                             }
                         }
                             break;
-                        case MinerMethods.PreCommitSectorBatch: {
+                        case MinerMethods.PreCommitSectorBatch2: {
                             let all_sectors = decoded_params[0];
                             for (let i = 0; i < all_sectors.length; i++) {
                                 let current_sector = all_sectors[i];
                                 const preCommitSector = {
                                     DealIDs: current_sector[4],
                                     Expiration: current_sector[5],
-                                    ReplaceCapacity: current_sector[6],
-                                    ReplaceSectorDeadline: current_sector[7],
-                                    ReplaceSectorNumber: current_sector[8],
-                                    ReplaceSectorPartition: current_sector[9],
+                                    UnsealedSectorCid: current_sector[6],
                                     SealProof: current_sector[0],
                                     SealRandEpoch: current_sector[3],
                                     SealedCID: current_sector[2],

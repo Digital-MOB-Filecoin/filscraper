@@ -24,7 +24,8 @@ const MinerMethods = {
     ChangeOwnerAddress: 23,
     DisputeWindowedPoSt: 24,
     PreCommitSectorBatch: 25,
-    ProveCommitAggregate: 26
+    ProveCommitAggregate: 26,
+    PreCommitSectorBatch2: 28,
 };
 
 module.exports = {
