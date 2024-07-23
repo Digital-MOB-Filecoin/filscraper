@@ -55,8 +55,8 @@ class WT {
     async get_data(region, starttime, endtime) {
         let params = {
             'region': region,
-            'starttime': starttime,
-            'endtime': endtime,
+            'start': starttime,
+            'end': endtime,
             'signal_type': 'co2_moer'
         };
 
@@ -72,8 +72,8 @@ class WT {
             await this.login();
             response = await this.get('/v3/historical', params);
         }
-        
-        return response?.data;
+
+        return response?.data.data;
     }
 
     async get_ba(latitude, longitude) {
@@ -111,7 +111,7 @@ class WT {
         var dateArray = new Array();
         var currentDate = startDate;
         while (currentDate <= stopDate) {
-            dateArray.push((new Date(currentDate)).toISOString().split('T')[0]);
+            dateArray.push((new Date(currentDate)).toISOString());
             currentDate = this.addDays(currentDate, 1);
         }
         return dateArray;
@@ -139,17 +139,17 @@ class WT {
             const ba_list = await db.get_ba_list();
             let endDate = (new Date());
             endDate.setDate(endDate.getDate() - 1);
-            endDate = endDate.toISOString().split('T')[0];
+            endDate = endDate.toISOString();
 
             for (const item of ba_list) {
                 let wt_data = [];
                 let startDate = await db.get_ba_start_date(item.ba);
                 if (!startDate) {
-                    startDate = '2020-08-25';
+                    startDate = new Date('2020-08-25').toISOString();
                 } else {
                     startDate = new Date(startDate);
                     startDate.setDate(startDate.getDate() + 1);
-                    startDate = startDate.toISOString().split('T')[0];
+                    startDate = startDate.toISOString();
                 }
 
                 var sd = new Date(startDate);
@@ -197,7 +197,7 @@ class WT {
 
 
         } catch (err) {
-            ERROR(`[[WT.update] ${err}`);
+            ERROR(`[WT.update] ${err}`);
         }
 
     }
