@@ -52,24 +52,25 @@ class WT {
         return response;
     }
 
-    async get_data(ba, starttime, endtime) {
+    async get_data(region, starttime, endtime) {
         let params = {
-            'ba': ba,
+            'region': region,
             'starttime': starttime,
-            'endtime': endtime
+            'endtime': endtime,
+            'signal_type': 'co2_moer'
         };
 
         if (!this.token) {
             await this.login();
         }
 
-        let response = await this.get('/data', params);
+        let response = await this.get('/v3/historical', params);
 
         if (response?.status == 401 || response?.status == 403) {
             INFO(`[WT_get_data] login and retry : ${JSON.stringify(params)}`);
             await pause(1);
             await this.login();
-            response = await this.get('/data', params);
+            response = await this.get('/v3/historical', params);
         }
         
         return response?.data;
@@ -78,20 +79,21 @@ class WT {
     async get_ba(latitude, longitude) {
         let params = {
             'latitude': latitude,
-            'longitude': longitude
+            'longitude': longitude,
+            'signal_type': 'co2_moer',
         };
         
         if (!this.token) {
             await this.login();
         }
 
-        let response = await this.get('/ba-from-loc', params);
+        let response = await this.get('/v3/region-from-loc', params);
 
         if (response?.status == 401 || response?.status == 403) {
             INFO(`[WT_get_ba] login and retry : ${JSON.stringify(params)}`);
             await pause(1);
             await this.login();
-            response = await this.get('/ba-from-loc', params);
+            response = await this.get('/v3/region-from-loc', params);
         }
 
         return response?.data;

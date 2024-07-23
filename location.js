@@ -120,10 +120,10 @@ class Location {
 
                     for (const [key, value] of unique_locations) {
                         let resp = await wt.get_ba(value.lat, value.long);
-                        if (resp && resp.abbrev) {
+                        if (resp && resp.region) {
                             INFO(`[Location] ba ${JSON.stringify(resp)} for ${JSON.stringify(value)}`);
 
-                            unique_locations_ba.set(key, resp.abbrev);
+                            unique_locations_ba.set(key, resp.region);
                         }
                     }
 
@@ -155,7 +155,7 @@ class Location {
 
                 INFO(`[Location] update completed.`);
             } else {
-                ERROR(`[Location] upable to get location data`);
+                ERROR(`[Location] unable to get location data`);
             } 
         } catch (err) {
             ERROR(`[Location] ${err}`);
