@@ -40,11 +40,12 @@ class WT {
                 headers: {
                     'Authorization': 'Bearer ' + this.token
                 },
-                timeout: 10000 //10 sec
+                timeout: 30000 //30 sec
             });
         } catch (err) {
             response = err?.response;
             if (err?.response?.status != 404) {
+                console.error(err?.response?.data);
                 ERROR(`[WT_get] ${err?.response?.data} status ${err?.response?.status}`);
             }
         }
