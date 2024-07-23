@@ -283,7 +283,15 @@ async function process_messages(block, messages) {
                         }
                             break;
                         case MinerMethods.DeclareFaultsRecovered: {
-                            let sectors = decode_sectors(Buffer.from(decoded_params[0][0][2]));
+                            let sectors;
+                            try {
+                                sectors = decode_sectors(Buffer.from(decoded_params[0][0][2]));
+                            } catch (e) {
+                                ERROR('[ProcessMessages] MinerMethods.DeclareFaultsRecovered decode error');
+                                console.log(`RAW SECTORS ${decoded_params[0][0][2]}`);
+                                console.error(e);
+                                break;
+                            }
 
                             for (let i = 0; i < sectors.length; i++) {
                                 let sector_events = {
