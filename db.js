@@ -1056,6 +1056,10 @@ class DB {
         }
         INFO('Refresh Emissions Energy Views, done');
     }
+
+    async delete_old_messages(blockHeight) {
+        await this.Query(`DELETE FROM fil_messages WHERE "Block" <= ${blockHeight};`, 'DeleteOldMessages');
+    }
 }
 
 module.exports = {

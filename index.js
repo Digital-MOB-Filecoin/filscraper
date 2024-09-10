@@ -16,6 +16,7 @@ const { Location } = require('./location');
 const { WT } = require('./watttime');
 const { LilyClient } = require('./lily-client');
 const { FilinfoClient } = require('./filinfo-client');
+require('./cron');
 
 const SCRAPE_LIMIT = 10 // blocks
 const INFURA_SCRAPE_LIMIT = 2 // blocks
