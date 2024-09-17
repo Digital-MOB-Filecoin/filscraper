@@ -823,7 +823,11 @@ const mainLoop = async _ => {
 
 }
 
-mainLoop();
+if(config.scraper.disable_main_loop == 0) {
+    mainLoop();
+} else {
+    INFO('Main Loop disabled');
+}
 
 function shutdown(exitCode = 0) {
     stop = true;
