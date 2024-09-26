@@ -248,6 +248,10 @@ async function process_messages(block, messages) {
                         case MinerMethods.TerminateSectors: {
                             let sectors = decode_sectors(Buffer.from(decoded_params[0][0][2]));
 
+
+
+                            // TODO add console log for sectors for debugging
+
                             for (let i = 0; i < sectors.length; i++) {
                                 let sector_events = {
                                     type: 'terminate',
@@ -266,6 +270,8 @@ async function process_messages(block, messages) {
                             break;
                         case MinerMethods.DeclareFaults: {
                             let sectors = decode_sectors(Buffer.from(decoded_params[0][0][2]));
+
+                            // TODO add console log for sectors for debugging
 
                             for (let i = 0; i < sectors.length; i++) {
                                 let sector_events = {
@@ -763,10 +769,10 @@ const mainLoop = async _ => {
             reprocess = true;
         }
 
-        INFO('Run migrations');
-        await migrations.run();
-        await migrations.create_indexes();
-        INFO('Run migrations, done');
+        // INFO('Run migrations');
+        // await migrations.run();
+        // await migrations.create_indexes();
+        // INFO('Run migrations, done');
 
         if (config.scraper.reprocess != 1 && config.scraper.lock_views != 1) {
             if (config.scraper.await_refresh_views != 1) {
