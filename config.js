@@ -17,6 +17,8 @@ module.exports = {
       wt_password: process.env.SCRAPER_WT_PASSWORD || '',
       filinfo_api: process.env.FILINFO_API || '',
       disable_main_loop: process.env.SCRAPER_DISABLE_MAIN_LOOP || 0,
+      skip_updating_views_on_cold_start: process.env.SCRAPER_SKIP_UPDATING_VIEWS_ON_COLD_START || 0,
+
     },
     database: {
         user: process.env.DB_USER || '',
