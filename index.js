@@ -748,6 +748,7 @@ async function refresh_views() {
     await db.refresh_miner_view_days();
     await db.refresh_miners_view();
     await db.refresh_sealed_capacity_view();
+    await db.refresh_miners_emission_scores_view();
     INFO('Refresh Views, done');
 }
 
