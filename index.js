@@ -931,6 +931,10 @@ const mainLoop = async (_) => {
       //await rescrape_missing_blocks_from_filinfo();
 
       let current_timestamp = Date.now();
+
+      await novaApi.update();
+      console.log("current_timestamp", current_timestamp);
+      console.log("last_update_emissions", last_update_emissions);
       if (current_timestamp - last_update_emissions > 8 * 3600 * 1000) {
         await lilyClient.update();
         await location.update();
