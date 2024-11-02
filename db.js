@@ -1,57 +1,56 @@
 const { Pool } = require("pg");
-const config = require('./config');
-const { INFO, ERROR, WARNING } = require('./logs');
+const config = require("./config");
+const { INFO, ERROR, WARNING } = require("./logs");
 
 // Type parser to use for timestamp without time zone
 // This will keep node-pg from parsing the value into a Date object and give you the raw timestamp string instead.
-var types = require('pg').types;
-types.setTypeParser(1114, function(stringValue) {
+var types = require("pg").types;
+types.setTypeParser(1114, function (stringValue) {
   return stringValue;
-})
+});
 
 function FormatNull(t) {
-    if (JSON.stringify(t) == 'null') {
-        return t;
-    } else {
-        return '\'' + t + '\'';
-    }
+  if (JSON.stringify(t) == "null") {
+    return t;
+  } else {
+    return "'" + t + "'";
+  }
 }
 
 function FormatText(t) {
-    if (!t) {
-        return;
-    }
+  if (!t) {
+    return;
+  }
 
-    return t.replace(/'/g, "''");
+  return t.replace(/'/g, "''");
 }
 
 class DB {
+  constructor() {
+    this.pool = new Pool(config.database);
+  }
 
-    constructor() {
-        this.pool = new Pool(config.database);
+  async Query(query, log, params = []) {
+    let result = undefined;
+    try {
+      result = await this.pool.query(query, params);
+    } catch (err) {
+      WARNING(`[${log}] ${query} -> ${err}`);
     }
 
-    async Query(query, log) {
-        let result = undefined;
-        try {
-            result = await this.pool.query(query);
-        } catch (err) {
-            WARNING(`[${log}] ${query} -> ${err}`)
-        }
+    return result;
+  }
 
-        return result;
-    }
+  async save_messages(msgs, from_filinfo = false) {
+    const client = await this.pool.connect();
 
-    async save_messages(msgs, from_filinfo = false) {
-        const client = await this.pool.connect();
+    for (let i = 0; i < msgs.length; i++) {
+      const msg = msgs[i];
+      try {
+        const { "/": msgCid } = msg.CID;
+        const { "/": msgCid2 } = msg.Cid;
 
-        for (let i = 0; i < msgs.length; i++) {
-            const msg = msgs[i];
-            try {
-                const { '/': msgCid } = msg.CID;
-                const { '/': msgCid2 } = msg.Cid;
-
-                await client.query(`\
+        await client.query(`\
         INSERT INTO fil_messages (\"CID\", \"Block\", \"From\", \"To\", \"Nonce\", \"Value\", \"GasLimit\", \"GasFeeCap\", \"GasPremium\", \"Method\", \"Params\", \"ExitCode\", \"Return\", \"GasUsed\", \"Version\", \"Cid\") \
         VALUES ('${from_filinfo ? msg.CID : msgCid}', \
         '${msg.Block}', \
@@ -70,231 +69,221 @@ class DB {
         '${msg.Version}',
         '${from_filinfo ? msg.Cid : msgCid2}') \
 `);
-
-            } catch (err) {
-                WARNING(`[SaveMessages] ${err}`)
-            }
-
-        }
-
-        client.release();
+      } catch (err) {
+        WARNING(`[SaveMessages] ${err}`);
+      }
     }
 
-    async save_messages_cids(msgs) {
-        const client = await this.pool.connect();
+    client.release();
+  }
 
-        for (let i = 0; i < msgs.length; i++) {
-            const msg = msgs[i];
-            try {
-                const { '/': msgCid } = msg.CID;
-                const { '/': msgCid2 } = msg.Cid;
+  async save_messages_cids(msgs) {
+    const client = await this.pool.connect();
 
-                await client.query(`\
+    for (let i = 0; i < msgs.length; i++) {
+      const msg = msgs[i];
+      try {
+        const { "/": msgCid } = msg.CID;
+        const { "/": msgCid2 } = msg.Cid;
+
+        await client.query(`\
                 UPDATE fil_messages SET \"Cid\" = '${msgCid2}' \
                 WHERE \"Block\" = ${msg.Block} AND \"CID\" = '${msgCid}'`);
-            } catch (err) {
-                WARNING(`[SaveMessagesCids] ${err}`)
-            }
-
-        }
-
-        client.release();
+      } catch (err) {
+        WARNING(`[SaveMessagesCids] ${err}`);
+      }
     }
 
-    async save_block(block, msgs, msg_cid) {
-        const client = await this.pool.connect();
-        try {
-            await client.query(`\
+    client.release();
+  }
+
+  async save_block(block, msgs, msg_cid) {
+    const client = await this.pool.connect();
+    try {
+      await client.query(`\
            INSERT INTO fil_blocks (Block, Msgs, msg_cid) \
            VALUES ('${block}', '${msgs}', '${msg_cid}') `);
-
-
-        } catch (err) {
-            WARNING(`[SaveBlock] ${err}`)
-        }
-        client.release()
+    } catch (err) {
+      WARNING(`[SaveBlock] ${err}`);
     }
+    client.release();
+  }
 
-    async mark_block_with_msg_cid(block) {
-        const client = await this.pool.connect();
-        try {
-            await client.query(`UPDATE fil_blocks SET msg_cid = true WHERE block = ${block};`);
-        } catch (err) {
-            WARNING(`[MarkBlockMsgCid] ${err}`)
-        }
-        client.release()
+  async mark_block_with_msg_cid(block) {
+    const client = await this.pool.connect();
+    try {
+      await client.query(
+        `UPDATE fil_blocks SET msg_cid = true WHERE block = ${block};`,
+      );
+    } catch (err) {
+      WARNING(`[MarkBlockMsgCid] ${err}`);
     }
+    client.release();
+  }
 
-    async save_bad_block(block) {
-        const client = await this.pool.connect();
-        try {
-            await client.query(`\
+  async save_bad_block(block) {
+    const client = await this.pool.connect();
+    try {
+      await client.query(`\
            INSERT INTO fil_bad_blocks (Block) \
            VALUES ('${block}') `);
-
-
-        } catch (err) {
-            WARNING(`[SaveBadBlock] ${err}`)
-        }
-        client.release()
+    } catch (err) {
+      WARNING(`[SaveBadBlock] ${err}`);
     }
+    client.release();
+  }
 
-    async get_start_block() {
-        const client = await this.pool.connect();
-        let block = 0;
-        try {
-            const result = await client.query(`\
+  async get_start_block() {
+    const client = await this.pool.connect();
+    let block = 0;
+    try {
+      const result = await client.query(`\
         SELECT MAX(Block) \
         FROM fil_blocks `);
 
-            if (result?.rows[0]?.max) {
-                block = parseInt(result?.rows[0]?.max);
-            }
-        } catch (err) {
-            WARNING(`[GetMaxBlock] ${err}`)
-        }
-        client.release()
-
-        return block;
+      if (result?.rows[0]?.max) {
+        block = parseInt(result?.rows[0]?.max);
+      }
+    } catch (err) {
+      WARNING(`[GetMaxBlock] ${err}`);
     }
+    client.release();
 
-    async get_bad_blocks(limit, offset) {
-        const client = await this.pool.connect();
-        let rows = undefined;
-        try {
-            const result = await client.query(`\
+    return block;
+  }
+
+  async get_bad_blocks(limit, offset) {
+    const client = await this.pool.connect();
+    let rows = undefined;
+    try {
+      const result = await client.query(`\
         SELECT block FROM fil_bad_blocks WHERE block > 1200000 ORDER BY block LIMIT ${limit} OFFSET ${offset}`);
 
-            if (result?.rows) {
-                rows = result?.rows;
-            }
-        } catch (err) {
-            WARNING(`[GetBadBlocks] ${err}`)
-        }
-        client.release()
-
-        return rows;
+      if (result?.rows) {
+        rows = result?.rows;
+      }
+    } catch (err) {
+      WARNING(`[GetBadBlocks] ${err}`);
     }
+    client.release();
 
-    async get_messages(block) {
-        const client = await this.pool.connect();
-        let messages = [];
-        try {
-            const result = await client.query(`\
+    return rows;
+  }
+
+  async get_messages(block) {
+    const client = await this.pool.connect();
+    let messages = [];
+    try {
+      const result = await client.query(`\
         SELECT * FROM fil_messages WHERE \"Block\"=${block}`);
 
-            if (result?.rows) {
-                messages = result?.rows;
-            }
-        } catch (err) {
-            WARNING(`[GetMessages] ${err}`)
-        }
-        client.release()
-
-        return messages;
+      if (result?.rows) {
+        messages = result?.rows;
+      }
+    } catch (err) {
+      WARNING(`[GetMessages] ${err}`);
     }
+    client.release();
 
-    async have_block(block) {
-        const client = await this.pool.connect();
-        let found = false;
+    return messages;
+  }
 
-        try {
-            const result = await client.query(`\
+  async have_block(block) {
+    const client = await this.pool.connect();
+    let found = false;
+
+    try {
+      const result = await client.query(`\
         SELECT EXISTS(SELECT 1 FROM fil_blocks WHERE Block = ${block})`);
 
-            if (result?.rows[0]?.exists) {
-                found = true;
-            }
-
-        } catch (err) {
-            WARNING(`[HaveBlock] ${err}`)
-        }
-        client.release()
-
-        return found;
+      if (result?.rows[0]?.exists) {
+        found = true;
+      }
+    } catch (err) {
+      WARNING(`[HaveBlock] ${err}`);
     }
+    client.release();
 
-    async have_messages(block) {
-        const client = await this.pool.connect();
-        let found = false;
+    return found;
+  }
 
-        try {
-            const result = await client.query(`\
+  async have_messages(block) {
+    const client = await this.pool.connect();
+    let found = false;
+
+    try {
+      const result = await client.query(`\
         SELECT EXISTS(SELECT 1 FROM fil_messages WHERE \"Block\" = ${block})`);
 
-            if (result?.rows[0]?.exists) {
-                found = true;
-            }
-
-        } catch (err) {
-            WARNING(`[HaveMessages] ${err}`)
-        }
-        client.release()
-
-        return found;
+      if (result?.rows[0]?.exists) {
+        found = true;
+      }
+    } catch (err) {
+      WARNING(`[HaveMessages] ${err}`);
     }
+    client.release();
 
-    async save_sectors(sectors_info) {
-        let values = '';
-        for (let i = 0; i < sectors_info.length - 1; i++) {
-            let sector_info = sectors_info[i];
-            values += `('${sector_info.sector}', \
+    return found;
+  }
+
+  async save_sectors(sectors_info) {
+    let values = "";
+    for (let i = 0; i < sectors_info.length - 1; i++) {
+      let sector_info = sectors_info[i];
+      values += `('${sector_info.sector}', \
                         '${sector_info.miner}',\
                         '${sector_info.type}',\
                         '${sector_info.size}',\
                         '${sector_info.start_epoch}',\
                         '${sector_info.end_epoch}'),`;
-        }
+    }
 
-        values += `('${sectors_info[sectors_info.length-1].sector}', \
-        '${sectors_info[sectors_info.length-1].miner}',\
-        '${sectors_info[sectors_info.length-1].type}',\
-        '${sectors_info[sectors_info.length-1].size}',\
-        '${sectors_info[sectors_info.length-1].start_epoch}',\
-        '${sectors_info[sectors_info.length-1].end_epoch}');`;
+    values += `('${sectors_info[sectors_info.length - 1].sector}', \
+        '${sectors_info[sectors_info.length - 1].miner}',\
+        '${sectors_info[sectors_info.length - 1].type}',\
+        '${sectors_info[sectors_info.length - 1].size}',\
+        '${sectors_info[sectors_info.length - 1].start_epoch}',\
+        '${sectors_info[sectors_info.length - 1].end_epoch}');`;
 
-        try {
-            await this.pool.query(`\
+    try {
+      await this.pool.query(`\
                 INSERT INTO fil_sectors (sector, miner, type, size, start_epoch, end_epoch) \
                 VALUES ${values}`);
-
-        } catch (err) {
-            WARNING(`[SaveSectors] ${err}`)
-        }
+    } catch (err) {
+      WARNING(`[SaveSectors] ${err}`);
     }
+  }
 
-    async save_sectors_events(sectors_events) {
-        let values = '';
-        for (let i = 0; i < sectors_events.length - 1; i++) {
-            let sector_events = sectors_events[i];
+  async save_sectors_events(sectors_events) {
+    let values = "";
+    for (let i = 0; i < sectors_events.length - 1; i++) {
+      let sector_events = sectors_events[i];
 
-            values += `('${sector_events.type}', \
+      values += `('${sector_events.type}', \
                         '${sector_events.miner}', \
                         '${sector_events.sector}', \
-                        '${sector_events.epoch}'), `
-        }
-
-        values += `('${sectors_events[sectors_events.length-1].type}', \
-                    '${sectors_events[sectors_events.length-1].miner}', \
-                    '${sectors_events[sectors_events.length-1].sector}', \
-                    '${sectors_events[sectors_events.length-1].epoch}');`
-
-        try {
-            await this.pool.query(`\
-           INSERT INTO fil_sector_events (type, miner, sector, epoch) \
-           VALUES  ${values}`);
-
-
-        } catch (err) {
-            WARNING(`[SaveSectorsEvents] ${err}`)
-        }
+                        '${sector_events.epoch}'), `;
     }
 
-    async save_miners_events(miners_events) {
-        let values = '';
-        for (let i = 0; i < miners_events.length - 1; i++) {
-            let miner_events = miners_events[i];
-            values += `('${miner_events.miner}', \
+    values += `('${sectors_events[sectors_events.length - 1].type}', \
+                    '${sectors_events[sectors_events.length - 1].miner}', \
+                    '${sectors_events[sectors_events.length - 1].sector}', \
+                    '${sectors_events[sectors_events.length - 1].epoch}');`;
+
+    try {
+      await this.pool.query(`\
+           INSERT INTO fil_sector_events (type, miner, sector, epoch) \
+           VALUES  ${values}`);
+    } catch (err) {
+      WARNING(`[SaveSectorsEvents] ${err}`);
+    }
+  }
+
+  async save_miners_events(miners_events) {
+    let values = "";
+    for (let i = 0; i < miners_events.length - 1; i++) {
+      let miner_events = miners_events[i];
+      values += `('${miner_events.miner}', \
             '${miner_events.commited.toString(10)}',\
             '${miner_events.used.toString(10)}',\
             '${miner_events.total.toString(10)}',\
@@ -304,302 +293,317 @@ class DB {
             '${miner_events.faults}',\
             '${miner_events.recovered}',\
             '${miner_events.proofs}',\
-            '${miner_events.epoch}'),`
-        }
-
-        values += `('${miners_events[miners_events.length-1].miner}', \
-        '${miners_events[miners_events.length-1].commited.toString(10)}',\
-        '${miners_events[miners_events.length-1].used.toString(10)}',\
-        '${miners_events[miners_events.length-1].total.toString(10)}',\
-        '${miners_events[miners_events.length-1].fraction.toPrecision(5)}',\
-        '${miners_events[miners_events.length-1].activated}',\
-        '${miners_events[miners_events.length-1].terminated}',\
-        '${miners_events[miners_events.length-1].faults}',\
-        '${miners_events[miners_events.length-1].recovered}',\
-        '${miners_events[miners_events.length-1].proofs}',\
-        '${miners_events[miners_events.length-1].epoch}');`
-
-        try {
-            await this.pool.query(`\
-           INSERT INTO fil_miner_events (miner, commited, used, total, fraction, activated, terminated, faults, recovered, proofs, epoch) \
-           VALUES ${values} `);
-
-
-        } catch (err) {
-            WARNING(`[SaveMinerEvents] ${err}`)
-        }
+            '${miner_events.epoch}'),`;
     }
 
-    async save_deals(deals_info) {
-        let values = '';
-        for (let i = 0; i < deals_info.length - 1; i++) {
-            let deal_info = deals_info[i];
-            values += `('${deal_info.deal}', \
+    values += `('${miners_events[miners_events.length - 1].miner}', \
+        '${miners_events[miners_events.length - 1].commited.toString(10)}',\
+        '${miners_events[miners_events.length - 1].used.toString(10)}',\
+        '${miners_events[miners_events.length - 1].total.toString(10)}',\
+        '${miners_events[miners_events.length - 1].fraction.toPrecision(5)}',\
+        '${miners_events[miners_events.length - 1].activated}',\
+        '${miners_events[miners_events.length - 1].terminated}',\
+        '${miners_events[miners_events.length - 1].faults}',\
+        '${miners_events[miners_events.length - 1].recovered}',\
+        '${miners_events[miners_events.length - 1].proofs}',\
+        '${miners_events[miners_events.length - 1].epoch}');`;
+
+    try {
+      await this.pool.query(`\
+           INSERT INTO fil_miner_events (miner, commited, used, total, fraction, activated, terminated, faults, recovered, proofs, epoch) \
+           VALUES ${values} `);
+    } catch (err) {
+      WARNING(`[SaveMinerEvents] ${err}`);
+    }
+  }
+
+  async save_deals(deals_info) {
+    let values = "";
+    for (let i = 0; i < deals_info.length - 1; i++) {
+      let deal_info = deals_info[i];
+      values += `('${deal_info.deal}', \
                         '${deal_info.sector}',\
                         '${deal_info.miner}',\
                         '${deal_info.start_epoch}',\
                         '${deal_info.end_epoch}'),`;
-        }
-
-        values += `('${deals_info[deals_info.length-1].deal}', \
-                    '${deals_info[deals_info.length-1].sector}',\
-                    '${deals_info[deals_info.length-1].miner}',\
-                    '${deals_info[deals_info.length-1].start_epoch}',\
-                    '${deals_info[deals_info.length-1].end_epoch}');`;
-
-        try {
-            await this.pool.query(`\
-           INSERT INTO fil_deals (deal, sector, miner, start_epoch, end_epoch) \
-           VALUES ${values}`);
-
-
-        } catch (err) {
-            WARNING(`[SaveDeal] ${err}`)
-        }
     }
 
-    async save_network(network_info) {
-        try {
-            await this.pool.query(`\
+    values += `('${deals_info[deals_info.length - 1].deal}', \
+                    '${deals_info[deals_info.length - 1].sector}',\
+                    '${deals_info[deals_info.length - 1].miner}',\
+                    '${deals_info[deals_info.length - 1].start_epoch}',\
+                    '${deals_info[deals_info.length - 1].end_epoch}');`;
+
+    try {
+      await this.pool.query(`\
+           INSERT INTO fil_deals (deal, sector, miner, start_epoch, end_epoch) \
+           VALUES ${values}`);
+    } catch (err) {
+      WARNING(`[SaveDeal] ${err}`);
+    }
+  }
+
+  async save_network(network_info) {
+    try {
+      await this.pool.query(`\
            INSERT INTO fil_network (epoch, commited, used, total, fraction) \
            VALUES ('${network_info.epoch}', \
                    '${network_info.commited.toString(10)}', \
                    '${network_info.used.toString(10)}', \
                    '${network_info.total.toString(10)}', \
                    '${network_info.fraction.toPrecision(5)}') `);
-
-
-        } catch (err) {
-            WARNING(`[SaveNetwork] ${err}`)
-        }
+    } catch (err) {
+      WARNING(`[SaveNetwork] ${err}`);
     }
+  }
 
-    async get_sector_size(miner) {
-        const client = await this.pool.connect();
-        let sector_size = undefined;
-        try {
-            const result = await client.query(`\
+  async get_sector_size(miner) {
+    const client = await this.pool.connect();
+    let sector_size = undefined;
+    try {
+      const result = await client.query(`\
         SELECT sector_size FROM fil_miners WHERE miner = \'${miner}\' LIMIT 1;`);
 
-            if (result?.rows) {
-                sector_size = result?.rows[0]?.sector_size;
-            }
-        } catch (err) {
-            WARNING(`[GetSectorSize] ${err}`)
-        }
-        client.release()
-
-        return sector_size;
+      if (result?.rows) {
+        sector_size = result?.rows[0]?.sector_size;
+      }
+    } catch (err) {
+      WARNING(`[GetSectorSize] ${err}`);
     }
+    client.release();
 
-    async save_sector_size(miner, sector_size) {
-        const client = await this.pool.connect();
-        try {
-            await client.query(`\
+    return sector_size;
+  }
+
+  async save_sector_size(miner, sector_size) {
+    const client = await this.pool.connect();
+    try {
+      await client.query(`\
            INSERT INTO fil_miners (miner, sector_size) \
            VALUES ('${miner}', '${sector_size}') `);
-
-
-        } catch (err) {
-            WARNING(`[SaveSectorSize] ${err}`)
-        }
-        client.release()
+    } catch (err) {
+      WARNING(`[SaveSectorSize] ${err}`);
     }
+    client.release();
+  }
 
-    async refresh_network_view_epochs() {
-        const client = await this.pool.connect();
-        try {
-            await client.query("\
+  async refresh_network_view_epochs() {
+    const client = await this.pool.connect();
+    try {
+      await client.query(
+        "\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_network_view_epochs WITH DATA;\
-            ");
-
-        } catch (err) {
-            WARNING(`[RefreshNetworkMatViewEpochs] ${err}`)
-        }
-        client.release();
+            ",
+      );
+    } catch (err) {
+      WARNING(`[RefreshNetworkMatViewEpochs] ${err}`);
     }
+    client.release();
+  }
 
-    async refresh_network_view_days() {
-        const client = await this.pool.connect();
-        try {
-            await client.query("\
+  async refresh_network_view_days() {
+    const client = await this.pool.connect();
+    try {
+      await client.query(
+        "\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_network_view_days WITH DATA;\
-            ");
-
-        } catch (err) {
-            WARNING(`[RefreshNetworkMatViewDays] ${err}`)
-        }
-        client.release();
+            ",
+      );
+    } catch (err) {
+      WARNING(`[RefreshNetworkMatViewDays] ${err}`);
     }
+    client.release();
+  }
 
-    async refresh_miner_view_epochs() {
-        const client = await this.pool.connect();
-        try {
-            await client.query("\
+  async refresh_miner_view_epochs() {
+    const client = await this.pool.connect();
+    try {
+      await client.query(
+        "\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_epochs WITH DATA;\
-            ");
-
-        } catch (err) {
-            WARNING(`[RefreshMinerMatViewEpochs] ${err}`)
-        }
-        client.release();
+            ",
+      );
+    } catch (err) {
+      WARNING(`[RefreshMinerMatViewEpochs] ${err}`);
     }
+    client.release();
+  }
 
-    async refresh_miner_view_days() {
-        const client = await this.pool.connect();
-        try {
-            //fil_miner_view_days_v4 depends on fil_miners_view_v3 and fil_miner_view_days
-            await client.query("\
+  async refresh_miner_view_days() {
+    const client = await this.pool.connect();
+    try {
+      //fil_miner_view_days_v4 depends on fil_miners_view_v3 and fil_miner_view_days
+      await client.query(
+        "\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_view_v3 WITH DATA;\
-            ");
-            await client.query("\
+            ",
+      );
+      await client.query(
+        "\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_days WITH DATA;\
-            ");
-            await client.query("\
+            ",
+      );
+      await client.query(
+        "\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_days_v4 WITH DATA;\
-            ");
-
-        } catch (err) {
-            WARNING(`[RefreshMinerMatViewDays] ${err}`)
-        }
-        client.release();
+            ",
+      );
+    } catch (err) {
+      WARNING(`[RefreshMinerMatViewDays] ${err}`);
     }
+    client.release();
+  }
 
-    async refresh_energy_ratio_views() {
-        const client = await this.pool.connect();
-        try {
-            //fil_renewable_energy_ratio_network_view depends on fil_renewable_energy_ratio_miner_view
-            await client.query("\
+  async refresh_energy_ratio_views() {
+    const client = await this.pool.connect();
+    try {
+      //fil_renewable_energy_ratio_network_view depends on fil_renewable_energy_ratio_miner_view
+      await client.query(
+        "\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_renewable_energy_ratio_miner_view WITH DATA;\
-            ");
-            await client.query("\
+            ",
+      );
+      await client.query(
+        "\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_renewable_energy_ratio_network_view WITH DATA;\
-            ");
-
-        } catch (err) {
-            WARNING(`[RefreshEnergyRatioViews] ${err}`)
-        }
-        client.release();
+            ",
+      );
+    } catch (err) {
+      WARNING(`[RefreshEnergyRatioViews] ${err}`);
     }
+    client.release();
+  }
 
-    async refresh_renewable_energy_views() {
-        const client = await this.pool.connect();
-        try {
-            await client.query("\
+  async refresh_renewable_energy_views() {
+    const client = await this.pool.connect();
+    try {
+      await client.query(
+        "\
             REFRESH MATERIALIZED VIEW fil_renewable_energy_from_transactions_view_v4 WITH DATA;\
-            ");
-            await client.query("\
+            ",
+      );
+      await client.query(
+        "\
             REFRESH MATERIALIZED VIEW fil_renewable_energy_from_contracts_view_v4 WITH DATA;\
-            ");
-            await client.query("\
+            ",
+      );
+      await client.query(
+        "\
             REFRESH MATERIALIZED VIEW fil_renewable_energy_view_v4 WITH DATA;\
-            ");
-
-        } catch (err) {
-            WARNING(`[RefreshRenewableEnergyMatViews] ${err}`)
-        }
-        client.release();
+            ",
+      );
+    } catch (err) {
+      WARNING(`[RefreshRenewableEnergyMatViews] ${err}`);
     }
+    client.release();
+  }
 
-    async refresh_miners_view() {
-        const client = await this.pool.connect();
-        try {
-            await client.query("\
+  async refresh_miners_view() {
+    const client = await this.pool.connect();
+    try {
+      await client.query(
+        "\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_view WITH DATA;\
-            ");
-
-        } catch (err) {
-            WARNING(`[RefreshMinersMatView] ${err}`)
-        }
-        client.release();
+            ",
+      );
+    } catch (err) {
+      WARNING(`[RefreshMinersMatView] ${err}`);
     }
+    client.release();
+  }
 
-    async refresh_sealed_capacity_view() {
-        const client = await this.pool.connect();
-        try {
-            await client.query("\
+  async refresh_sealed_capacity_view() {
+    const client = await this.pool.connect();
+    try {
+      await client.query(
+        "\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_sealed_capacity_view_v2 WITH DATA;\
-            ");
-
-        } catch (err) {
-            WARNING(`[RefreshMinersMatView] ${err}`)
-        }
-        client.release();
+            ",
+      );
+    } catch (err) {
+      WARNING(`[RefreshMinersMatView] ${err}`);
     }
+    client.release();
+  }
 
-    async refresh_miners_emission_scores_view() {
-        const client = await this.pool.connect();
-        try {
-            await client.query("\
+  async refresh_miners_emission_scores_view() {
+    const client = await this.pool.connect();
+    try {
+      await client.query(
+        "\
             REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_emission_scores WITH DATA;\
-            ");
-
-        } catch (err) {
-            WARNING(`[RefreshMinersMatView] ${err}`)
-        }
-        client.release();
+            ",
+      );
+    } catch (err) {
+      WARNING(`[RefreshMinersMatView] ${err}`);
     }
+    client.release();
+  }
 
-    async get_missing_blocks(head, start = 0) {
-        const client = await this.pool.connect();
-        let missing_blocks = undefined;
-        try {
-            const result = await client.query(`\
+  async get_missing_blocks(head, start = 0) {
+    const client = await this.pool.connect();
+    let missing_blocks = undefined;
+    try {
+      const result = await client.query(`\
             SELECT s.i AS missing_block \
             FROM generate_series(${head}, ${start}, -1) s(i) \
             WHERE (NOT EXISTS (SELECT 1 FROM fil_blocks WHERE block = s.i)) AND \
             (NOT EXISTS (SELECT 1 FROM fil_bad_blocks WHERE block = s.i)); `);
 
-            if (result?.rows) {
-                missing_blocks = result?.rows;
-            }
-        } catch (err) {
-            WARNING(`[GetMissingBlocks] ${err}`)
-        }
-        client.release();
+      if (result?.rows) {
+        missing_blocks = result?.rows;
+      }
+    } catch (err) {
+      WARNING(`[GetMissingBlocks] ${err}`);
+    }
+    client.release();
 
-        return missing_blocks;
-    } 
-    async get_blocks_with_missing_cid(head) {
-        const client = await this.pool.connect();
-        let blocks_with_missing_cid = undefined;
-        try {
-            const result = await client.query(`\
+    return missing_blocks;
+  }
+  async get_blocks_with_missing_cid(head) {
+    const client = await this.pool.connect();
+    let blocks_with_missing_cid = undefined;
+    try {
+      const result = await client.query(`\
             SELECT s.i AS block_with_missing_cid \
             FROM generate_series(${head}, 0, -1) s(i) \
             WHERE ( EXISTS (SELECT 1 FROM fil_blocks WHERE (block = s.i and msg_cid is null))); `);
 
-            if (result?.rows) {
-                blocks_with_missing_cid = result?.rows;
-            }
-        } catch (err) {
-            WARNING(`[GetBlocksWithMissingCid] ${err}`)
-        }
-        client.release();
+      if (result?.rows) {
+        blocks_with_missing_cid = result?.rows;
+      }
+    } catch (err) {
+      WARNING(`[GetBlocksWithMissingCid] ${err}`);
+    }
+    client.release();
 
-        return blocks_with_missing_cid;
-    } 
+    return blocks_with_missing_cid;
+  }
 
-    async reset_renewable_energy_data() {
-        await this.Query(`
+  async reset_renewable_energy_data() {
+    await this.Query(
+      `
         TRUNCATE fil_renewable_energy_miners; \
         TRUNCATE fil_renewable_energy_transactions; \
         TRUNCATE fil_renewable_energy_contracts; \
         TRUNCATE fil_renewable_energy_from_contracts; \
         TRUNCATE fil_renewable_energy_from_transactions; \
-        `,'ResetRenewableEnergyData');
-    }
+        `,
+      "ResetRenewableEnergyData",
+    );
+  }
 
-    async save_miner_renewable_energy(miner) {
-        try {
-            let values = `'${miner.id}', \
+  async save_miner_renewable_energy(miner) {
+    try {
+      let values = `'${miner.id}', \
                         '${miner.buyerId}',\
                         ${FormatNull(miner.blockchainAddress)},\
                         ${FormatNull(miner.createdAt)},\
                         ${FormatNull(miner.updatedAt)},\
                         ${miner.recsTotal}`;
 
-            await this.Query(`
+      await this.Query(
+        `
                 UPDATE fil_renewable_energy_miners SET buyer_id='${miner.buyerId}', \
                                  blockchain_address=${FormatNull(miner.blockchainAddress)}, \
                                  created_at=${FormatNull(miner.createdAt)}, \
@@ -608,16 +612,16 @@ class DB {
                     WHERE id='${miner.id}'; \
                 INSERT INTO fil_renewable_energy_miners (id, buyer_id, blockchain_address, created_at, updated_at, recs_total) \
                     SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_miners WHERE id='${miner.id}');`,
-                    'SaveMinerRenewableEnergy');
-
-        } catch (err) {
-            WARNING(`[SaveMinerRenewableEnergy] -> ${err}`)
-        }
+        "SaveMinerRenewableEnergy",
+      );
+    } catch (err) {
+      WARNING(`[SaveMinerRenewableEnergy] -> ${err}`);
     }
+  }
 
-    async save_transaction_renewable_energy(transaction) {
-        try {
-            let values = `'${transaction.id}', \
+  async save_transaction_renewable_energy(transaction) {
+    try {
+      let values = `'${transaction.id}', \
                         '${transaction.miner_id}', \
                         '${transaction.pageUrl}',\
                         '${transaction.dataUrl}',\
@@ -657,9 +661,9 @@ class DB {
                         ${FormatNull(transaction.generation.generationEndLocal)},\
                         '${JSON.stringify(transaction.generation)}',\
                         ${FormatNull(transaction.generation.country)}`;
-                        
 
-            await this.Query(`
+      await this.Query(
+        `
                 UPDATE fil_renewable_energy_transactions SET 
                                  page_url='${transaction.pageUrl}',\
                                  data_url='${transaction.dataUrl}',\
@@ -743,51 +747,56 @@ class DB {
                     country \
                     ) \
                     SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_transactions WHERE id='${transaction.id}');`,
-                    'SaveTransactionRenewableEnergy');
+        "SaveTransactionRenewableEnergy",
+      );
+    } catch (err) {
+      WARNING(`[SaveTransactionRenewableEnergy] -> ${err}`);
+    }
+  }
 
-        } catch (err) {
-            WARNING(`[SaveTransactionRenewableEnergy] -> ${err}`)
-        }
+  async save_renewable_energy_from_transactions(transaction) {
+    let id = transaction.id;
+    let miner = transaction.miner_id;
+    let totalEnergy = transaction.recsSoldWh;
+
+    let start = transaction.generation.generationStart;
+    let date1 = new Date(transaction.generation.generationStart);
+    let date2 = new Date("2020-08-25");
+
+    if (date1 < date2) {
+      console.log(
+        "save_renewable_energy_from_transactions generationStart",
+        transaction.generation.generationStart,
+      );
+      start = "2020-08-25";
     }
 
-    async save_renewable_energy_from_transactions(transaction) {
-        let id = transaction.id;
-        let miner = transaction.miner_id;
-        let totalEnergy = transaction.recsSoldWh;
+    let query = await this.Query(
+      `SELECT t.date::text FROM generate_series(timestamp '${start}', timestamp '${transaction.generation.generationEnd}', interval  '1 day') AS t(date);`,
+    );
+    let data_points = query?.rows;
+    let country = FormatNull(transaction.generation.country);
 
-        let start = transaction.generation.generationStart;
-        let date1 = new Date(transaction.generation.generationStart);
-        let date2 = new Date('2020-08-25');
+    if (data_points && data_points?.length) {
+      for (let i = 0; i < data_points.length; i++) {
+        let processed_date = data_points[i].date?.split(" ")[0];
+        let data = {
+          miner: miner,
+          transaction_id: id,
+          energyWh: totalEnergy / data_points.length,
+          date: processed_date,
+          country: country,
+        };
 
-        if (date1 < date2) {
-            console.log('save_renewable_energy_from_transactions generationStart', transaction.generation.generationStart);
-            start = '2020-08-25';
-        }
-
-        let query = await this.Query(`SELECT t.date::text FROM generate_series(timestamp '${start}', timestamp '${transaction.generation.generationEnd}', interval  '1 day') AS t(date);`);
-        let data_points = query?.rows;
-        let country = FormatNull(transaction.generation.country);
-
-        if (data_points && data_points?.length) {
-
-            for (let i = 0; i < data_points.length; i++) {
-                let processed_date = data_points[i].date?.split(' ')[0];
-                let data = {
-                    miner: miner,
-                    transaction_id: id,
-                    energyWh: totalEnergy / data_points.length,
-                    date: processed_date,
-                    country: country,
-                };
-
-                try {
-                    let values = `'${data.miner}', \
+        try {
+          let values = `'${data.miner}', \
                         '${data.transaction_id}', \
                         '${data.date}',\
                         '${data.energyWh}',\
                          ${data.country}`;
 
-                    await this.Query(`
+          await this.Query(
+            `
                 UPDATE fil_renewable_energy_from_transactions SET 
                                 energyWh='${data.energyWh}'\
                     WHERE miner='${data.miner}' AND transaction_id='${data.transaction_id}' AND date='${data.date}' AND country=${data.country}; \
@@ -799,19 +808,18 @@ class DB {
                     country \
                     ) \
                     SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_from_transactions WHERE miner='${data.miner}' AND transaction_id='${data.transaction_id}' AND date='${data.date}' AND country=${data.country});`,
-                        'SaveRenewableEnergyFromTransactions');
-
-                } catch (err) {
-                    WARNING(`[SaveRenewableEnergyFromTransactions] -> ${err}`)
-                }
-
-            }
+            "SaveRenewableEnergyFromTransactions",
+          );
+        } catch (err) {
+          WARNING(`[SaveRenewableEnergyFromTransactions] -> ${err}`);
         }
+      }
     }
+  }
 
-    async save_contract_renewable_energy(contract) {
-        try {
-            let values = `'${contract.id}', \
+  async save_contract_renewable_energy(contract) {
+    try {
+      let values = `'${contract.id}', \
                         '${contract.miner_id}', \
                         ${FormatNull(contract.productType)},\
                         '${JSON.stringify(contract.energySources)}',\
@@ -831,9 +839,10 @@ class DB {
                         ${FormatNull(contract.createdAt)},\
                         ${FormatNull(contract.updatedAt)},\
                         '${JSON.stringify(contract.countryRegionMap)}',\
-                        ${FormatNull(contract.countryRegionMap[0]?.country)}`;      
+                        ${FormatNull(contract.countryRegionMap[0]?.country)}`;
 
-            await this.Query(`
+      await this.Query(
+        `
                 UPDATE fil_renewable_energy_contracts SET 
                             product_type=${FormatNull(contract.productType)},\
                             energy_sources='${JSON.stringify(contract.energySources)}',\
@@ -879,52 +888,58 @@ class DB {
                     country \
                     ) \
                     SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_contracts WHERE id='${contract.id}');`,
-                    'SaveContractRenewableEnergy');
+        "SaveContractRenewableEnergy",
+      );
+    } catch (err) {
+      WARNING(`[SaveContractRenewableEnergy] -> ${err}`);
+    }
+  }
 
-        } catch (err) {
-            WARNING(`[SaveContractRenewableEnergy] -> ${err}`)
-        }
+  async save_renewable_energy_from_contracts(contract) {
+    let id = contract.id;
+    let miner = contract.miner_id;
+    let totalEnergy = contract.openVolume;
+
+    let start = contract.reportingStart;
+    let date1 = new Date(contract.reportingStart);
+    let date2 = new Date("2020-08-25");
+
+    if (date1 < date2) {
+      console.log(
+        "save_renewable_energy_from_contracts reportingStart",
+        contract.reportingStart,
+      );
+      start = "2020-08-25";
     }
 
-    async save_renewable_energy_from_contracts(contract) {
-        let id = contract.id;
-        let miner = contract.miner_id;
-        let totalEnergy = contract.openVolume;
+    let query = await this.Query(
+      `SELECT t.date::text FROM generate_series(timestamp '${contract.reportingStart}', timestamp '${contract.reportingEnd}', interval  '1 day') AS t(date);`,
+    );
+    let data_points = query?.rows;
+    let country = FormatNull(contract.countryRegionMap[0]?.country);
 
-        let start = contract.reportingStart;
-        let date1 = new Date(contract.reportingStart);
-        let date2 = new Date('2020-08-25');
+    //INFO(`[SaveRenewableEnergyFromContracts] for ${miner} contract.id: ${id} , openVolume: ${totalEnergy}`);
 
-        if (date1 < date2) {
-            console.log('save_renewable_energy_from_contracts reportingStart', contract.reportingStart);
-            start = '2020-08-25';
-        }
+    if (data_points && data_points?.length) {
+      for (let i = 0; i < data_points.length; i++) {
+        let processed_date = data_points[i].date?.split(" ")[0];
+        let data = {
+          miner: miner,
+          contract_id: id,
+          energyWh: totalEnergy / data_points.length,
+          date: processed_date,
+          country: country,
+        };
 
-        let query = await this.Query(`SELECT t.date::text FROM generate_series(timestamp '${contract.reportingStart}', timestamp '${contract.reportingEnd}', interval  '1 day') AS t(date);`);
-        let data_points = query?.rows;
-        let country = FormatNull(contract.countryRegionMap[0]?.country);
-
-        //INFO(`[SaveRenewableEnergyFromContracts] for ${miner} contract.id: ${id} , openVolume: ${totalEnergy}`);
-
-        if (data_points && data_points?.length) {
-            for (let i = 0; i < data_points.length; i++) {
-                let processed_date = data_points[i].date?.split(' ')[0];
-                let data = {
-                    miner: miner,
-                    contract_id: id,
-                    energyWh: totalEnergy / data_points.length,
-                    date: processed_date,
-                    country: country,
-                };
-
-                try {
-                    let values = `'${data.miner}', \
+        try {
+          let values = `'${data.miner}', \
                         '${data.contract_id}', \
                         '${data.date}',\
                         '${data.energyWh}',\
                          ${data.country}`;
 
-                    await this.Query(`
+          await this.Query(
+            `
                 UPDATE fil_renewable_energy_from_contracts SET 
                                 energyWh='${data.energyWh}'\
                     WHERE miner='${data.miner}' AND contract_id='${data.contract_id}' AND date='${data.date}' AND country=${data.country}; \
@@ -936,32 +951,34 @@ class DB {
                     country \
                     ) \
                     SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_renewable_energy_from_contracts WHERE miner='${data.miner}' AND contract_id='${data.contract_id}' AND date='${data.date}'  AND country=${data.country});`,
-                        'SaveRenewableEnergyFromContracts');
-
-                } catch (err) {
-                    WARNING(`[SaveRenewableEnergyFromContracts] -> ${err}`)
-                }
-
-            }
+            "SaveRenewableEnergyFromContracts",
+          );
+        } catch (err) {
+          WARNING(`[SaveRenewableEnergyFromContracts] -> ${err}`);
         }
+      }
+    }
+  }
+
+  async location_get() {
+    let locations = [];
+
+    const result = await this.Query(
+      `SELECT * FROM fil_miners_location`,
+      "LocationGet",
+    );
+    if (result?.rows) {
+      locations = result?.rows;
     }
 
-    async location_get() {
-        let locations = [];
+    return locations;
+  }
 
-        const result = await this.Query(`SELECT * FROM fil_miners_location`, 'LocationGet');
-        if (result?.rows) {
-            locations = result?.rows;
-        }
-
-        return locations;
-    }
-
-    async location_add(list) {
-        if (list.length) {
-            let values = '';
-            for (const item of list) {
-                values += `('${item.miner}', \
+  async location_add(list) {
+    if (list.length) {
+      let values = "";
+      for (const item of list) {
+        values += `('${item.miner}', \
                         ${item.lat},\
                         ${item.long},\
                         ${FormatNull(item.ba)},\
@@ -969,112 +986,164 @@ class DB {
                         ${FormatNull(item.country)},\
                         ${FormatNull(FormatText(item.city))},\
                         ${item.locations}),`;
-            }
+      }
 
-            values = values.slice(0, -1) + ';';
+      values = values.slice(0, -1) + ";";
 
-
-            await this.Query(`\
+      await this.Query(
+        `\
            INSERT INTO fil_miners_location (miner, lat, long, ba, region, country, city, locations) \
-           VALUES ${values}`, 'LocationAdd');
-        }
+           VALUES ${values}`,
+        "LocationAdd",
+      );
+    }
+  }
+
+  async location_delete(miner) {
+    await this.Query(
+      `DELETE FROM fil_miners_location WHERE miner = '${miner}';`,
+      "LocationDelete",
+    );
+  }
+
+  async get_ba_list() {
+    let locations = [];
+
+    const result = await this.Query(
+      `SELECT DISTINCT ba FROM fil_miners_location WHERE ba is not null;`,
+      "LocationGetBAList",
+    );
+    if (result?.rows) {
+      locations = result?.rows;
     }
 
-    async location_delete(miner) {
-        await this.Query(`DELETE FROM fil_miners_location WHERE miner = '${miner}';`, 'LocationDelete');
+    return locations;
+  }
+
+  async get_ba_start_date(ba) {
+    let start_date = [];
+
+    const result = await this.Query(
+      `SELECT MAX(date) FROM fil_wt WHERE ba = '${ba}';`,
+      "LocationGetBAStartDate",
+    );
+    if (result?.rows) {
+      start_date = result?.rows[0].max;
     }
 
-    async get_ba_list() {
-        let locations = [];
+    return start_date;
+  }
 
-        const result = await this.Query(`SELECT DISTINCT ba FROM fil_miners_location WHERE ba is not null;`, 'LocationGetBAList');
-        if (result?.rows) {
-            locations = result?.rows;
-        }
-
-        return locations;
-    }
-
-    async get_ba_start_date(ba) {
-        let start_date = [];
-
-        const result = await this.Query(`SELECT MAX(date) FROM fil_wt WHERE ba = '${ba}';`, 'LocationGetBAStartDate');
-        if (result?.rows) {
-            start_date = result?.rows[0].max;
-        }
-
-        return start_date;
-    }
-
-    async wt_data_add(list) {
-        if (list.length) {
-            let values = '';
-            for (const item of list) {
-                values += `('${item.ba}', \
+  async wt_data_add(list) {
+    if (list.length) {
+      let values = "";
+      for (const item of list) {
+        values += `('${item.ba}', \
                         ${item.value},\
                         '${item.date}'),`;
-            }
+      }
 
-            values = values.slice(0, -1) + ';';
+      values = values.slice(0, -1) + ";";
 
-
-            await this.Query(`\
+      await this.Query(
+        `\
            INSERT INTO fil_wt (ba, value, date) \
-           VALUES ${values}`, 'WTDataAdd');
-        }
+           VALUES ${values}`,
+        "WTDataAdd",
+      );
+    }
+  }
+
+  async nova_api_data_add({ minerId, date, confidence_score }) {
+    await this.Query(
+      `
+          INSERT INTO fil_miners_confidence_scores (miner_id, date, confidence_score)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (miner_id, date)
+          DO UPDATE SET confidence_score = EXCLUDED.confidence_score;
+      `,
+      "NovaApiDataAdd",
+      [minerId, date, confidence_score],
+    );
+  }
+
+  async get_lily_start_date() {
+    let start_date = [];
+
+    const result = await this.Query(
+      `SELECT MAX(date) FROM fil_miner_days_lily;`,
+      "LilyGetStartDate",
+    );
+    if (result?.rows) {
+      start_date = result?.rows[0].max;
     }
 
-    async get_lily_start_date() {
-        let start_date = [];
+    return start_date;
+  }
 
-        const result = await this.Query(`SELECT MAX(date) FROM fil_miner_days_lily;`, 'LilyGetStartDate');
-        if (result?.rows) {
-            start_date = result?.rows[0].max;
-        }
-
-        return start_date;
-    }
-
-    async save_lily_data(data) {
-        let query = '';
-        for (let i = 0; i < data.length; i++) {
-            try {
-                let d = data[i];
-                let values = `'${d.miner_id}', \
+  async save_lily_data(data) {
+    let query = "";
+    for (let i = 0; i < data.length; i++) {
+      try {
+        let d = data[i];
+        let values = `'${d.miner_id}', \
                             '${d.raw_byte_power}',\
                             '${d.stat_date}'`;
-                query += `\
+        query += `\
                     INSERT INTO fil_miner_days_lily (miner, power, date) \
                         SELECT ${values} WHERE NOT EXISTS (SELECT 1 FROM fil_miner_days_lily WHERE miner='${d.miner_id}' AND date='${d.stat_date}');`;
-            } catch (err) {
-                WARNING(`[SaveLilyData] -> ${err}`)
-            }
-        }
-        await this.Query(query, 'SaveLilyData');
+      } catch (err) {
+        WARNING(`[SaveLilyData] -> ${err}`);
+      }
     }
+    await this.Query(query, "SaveLilyData");
+  }
 
-
-    async refresh_emissions_views() {
-        INFO('Refresh Emissions Energy Views');
-        try {
-            await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_location_view WITH DATA;", 'RefreshEmissionsMatViews');
-            await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_wt_view WITH DATA;", 'RefreshEmissionsMatViews');
-            await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_un_view WITH DATA;", 'RefreshEmissionsMatViews');
-            await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_days_lily_v1 WITH DATA;", 'RefreshEmissionsMatViews');
-            await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_emissions_view_v8 WITH DATA;", 'RefreshEmissionsMatViews');
-            await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_data_view_country_v9 WITH DATA;", 'RefreshEmissionsMatViews');
-            await this.Query("REFRESH MATERIALIZED VIEW CONCURRENTLY fil_map_view_v9 WITH DATA;", 'RefreshEmissionsMatViews');
-        } catch (err) {
-            WARNING(`[RefreshEmissionsMatViews] ${err}`)
-        }
-        INFO('Refresh Emissions Energy Views, done');
+  async refresh_emissions_views() {
+    INFO("Refresh Emissions Energy Views");
+    try {
+      await this.Query(
+        "REFRESH MATERIALIZED VIEW CONCURRENTLY fil_location_view WITH DATA;",
+        "RefreshEmissionsMatViews",
+      );
+      await this.Query(
+        "REFRESH MATERIALIZED VIEW CONCURRENTLY fil_wt_view WITH DATA;",
+        "RefreshEmissionsMatViews",
+      );
+      await this.Query(
+        "REFRESH MATERIALIZED VIEW CONCURRENTLY fil_un_view WITH DATA;",
+        "RefreshEmissionsMatViews",
+      );
+      await this.Query(
+        "REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miner_view_days_lily_v1 WITH DATA;",
+        "RefreshEmissionsMatViews",
+      );
+      await this.Query(
+        "REFRESH MATERIALIZED VIEW CONCURRENTLY fil_emissions_view_v8 WITH DATA;",
+        "RefreshEmissionsMatViews",
+      );
+      await this.Query(
+        "REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_data_view_country_v9 WITH DATA;",
+        "RefreshEmissionsMatViews",
+      );
+      await this.Query(
+        "REFRESH MATERIALIZED VIEW CONCURRENTLY fil_map_view_v9 WITH DATA;",
+        "RefreshEmissionsMatViews",
+      );
+    } catch (err) {
+      WARNING(`[RefreshEmissionsMatViews] ${err}`);
     }
+    INFO("Refresh Emissions Energy Views, done");
+  }
 
-    async delete_old_messages(blockHeight) {
-        await this.Query(`DELETE FROM fil_messages WHERE "Block" <= ${blockHeight};`, 'DeleteOldMessages');
-    }
+  async delete_old_messages(blockHeight) {
+    await this.Query(
+      `DELETE FROM fil_messages WHERE "Block" <= ${blockHeight};`,
+      "DeleteOldMessages",
+    );
+  }
 }
 
 module.exports = {
-    DB
-}
+  DB,
+};
