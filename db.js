@@ -1057,9 +1057,9 @@ class DB {
   async nova_api_data_add({ minerId, date, confidence_score }) {
     await this.Query(
       `
-          INSERT INTO fil_miners_confidence_scores (miner_id, date, confidence_score)
+          INSERT INTO fil_miners_confidence_scores (miner, date, confidence_score)
           VALUES ($1, $2, $3)
-          ON CONFLICT (miner_id, date)
+          ON CONFLICT (miner, date)
           DO UPDATE SET confidence_score = EXCLUDED.confidence_score;
       `,
       "NovaApiDataAdd",
