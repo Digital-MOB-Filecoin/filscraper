@@ -48,17 +48,17 @@ class NovaApi {
   async update() {
     try {
       const response = await this.get("/greenscores");
-      console.log("nova response", response);
       const data = response.data;
 
       const insertPromises = [];
       for (const greenscore of data.greenscores) {
+        const { greenscore_data } = greenscore;
         const {
           report_start_date,
           report_end_date,
           confidence_score,
           provider_network,
-        } = greenscore;
+        } = greenscore_data;
 
         const dates = this.getDatesBetween(report_start_date, report_end_date);
 
