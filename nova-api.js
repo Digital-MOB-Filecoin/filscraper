@@ -48,6 +48,7 @@ class NovaApi {
   async update() {
     try {
       const response = await this.get("/greenscores");
+      console.log("nova response", response);
       const data = response.data;
 
       const insertPromises = [];
