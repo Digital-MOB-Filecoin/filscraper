@@ -1,5 +1,5 @@
 const { default: axios } = require("axios");
-const { ERROR } = require("./logs");
+const { ERROR, INFO } = require("./logs");
 const { DB } = require("./db");
 const config = require("./config");
 
@@ -47,34 +47,43 @@ class NovaApi {
 
   async update() {
     try {
-      const response = await this.get("/greenscores");
-      const data = response.data;
+      const response = await this.get("/miners");
+      const nodes = response.data.data;
 
-      const insertPromises = [];
-      for (const greenscore of data.greenscores) {
-        const { greenscore_data } = greenscore;
-        const {
-          report_start_date,
-          report_end_date,
-          confidence_score,
-          provider_network,
-        } = greenscore_data;
+      const minerConfidenceScores = [];
 
-        const dates = this.getDatesBetween(report_start_date, report_end_date);
+      for (const node of nodes) {
+        for (const document of node.documents) {
+          const {
+            miner_ids,
+            report_start_date,
+            report_end_date,
+            confidence_score,
+          } = document.data.audit_document.greenscore;
 
-        for (const minerId of provider_network.miner_ids) {
-          for (const date of dates) {
-            insertPromises.push(
-              db.nova_api_data_add({ minerId, date, confidence_score }),
-            );
+          const dates = this.getDatesBetween(
+            report_start_date,
+            report_end_date,
+          );
+
+          for (const minerId of miner_ids) {
+            for (const date of dates) {
+              minerConfidenceScores.push({
+                minerId,
+                date,
+                confidenceScore: confidence_score,
+              });
+            }
           }
         }
       }
 
-      await Promise.all(insertPromises);
-      console.log("Confidence scores inserted successfully.");
+      console.time("a");
+      await db.nova_api_data_add(minerConfidenceScores);
+      console.timeEnd("a");
+      INFO("[Nova_API_success] Confidence scores inserted successfully.");
     } catch (err) {
-      ERROR(`[WT.update] ${err}`);
+      ERROR(`[Nova_API_error] ${err}`);
     }
   }
 }
@@ -82,8 +91,3 @@ class NovaApi {
 module.exports = {
   NovaApi,
 };
-
-// call nova api
-// normalize the data
-// insert the data into the database
-// show the date in the frontend on the same logic as miners emissions score

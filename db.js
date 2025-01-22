@@ -1054,17 +1054,33 @@ class DB {
     }
   }
 
-  async nova_api_data_add({ minerId, date, confidence_score }) {
-    await this.Query(
-      `
-          INSERT INTO fil_miners_confidence_scores (miner, date, confidence_score)
-          VALUES ($1, $2, $3)
-          ON CONFLICT (miner, date)
-          DO UPDATE SET confidence_score = EXCLUDED.confidence_score;
-      `,
-      "NovaApiDataAdd",
-      [minerId, date, confidence_score],
-    );
+  /*
+   * We are using individual inserts because the data source may contain duplicates and ON CONFLICT DO UPDATE does not support this
+   */
+  async nova_api_data_add(data) {
+    const batchSize = 2000;
+    let currentBatchSize = 0;
+
+    let query = "";
+
+    for (const { minerId, date, confidenceScore } of data) {
+      query += `
+                    INSERT INTO fil_miners_confidence_scores (miner, date, confidence_score) 
+                    VALUES('${minerId}', '${date}', ${confidenceScore}) 
+                    ON CONFLICT (miner, date) 
+                    DO UPDATE SET confidence_score = EXCLUDED.confidence_score;
+                    `;
+      currentBatchSize++;
+
+      if (currentBatchSize === batchSize) {
+        await this.Query(query, "NovaApiDataAdd");
+        query = "";
+        currentBatchSize = 0;
+      }
+    }
+    if (currentBatchSize) {
+      await this.Query(query, "NovaApiDataAdd");
+    }
   }
 
   async get_lily_start_date() {
