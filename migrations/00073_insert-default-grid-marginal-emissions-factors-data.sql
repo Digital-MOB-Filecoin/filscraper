@@ -44,6 +44,7 @@ INSERT INTO fil_default_grid_marginal_emissions_factors (country, value) VALUES
 ('JE', 752.5333333333333),
 ('CL', 656.606215831873),
 ('CN', 898.9063635467729),
+('HK', 898.9063635467729),
 ('CO', 409.7107473014722),
 ('KM', 752.5333333333333),
 ('CD', 0),
