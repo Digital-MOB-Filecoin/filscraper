@@ -881,6 +881,7 @@ async function refresh_views() {
   await db.refresh_sealed_capacity_view();
   await db.refresh_miners_emission_scores_view();
   await db.refresh_miners_location_scores_view();
+  await db.refresh_miners_green_scores_view();
   INFO("Refresh Views, done");
 }
 
