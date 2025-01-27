@@ -521,7 +521,7 @@ class DB {
             ",
       );
     } catch (err) {
-      WARNING(`[RefreshMinersMatView] ${err}`);
+      WARNING(`[RefreshSealedCapacityMatView] ${err}`);
     }
     client.release();
   }
@@ -535,7 +535,21 @@ class DB {
             ",
       );
     } catch (err) {
-      WARNING(`[RefreshMinersMatView] ${err}`);
+      WARNING(`[RefreshMinersEmissionScoresMatView] ${err}`);
+    }
+    client.release();
+  }
+
+  async refresh_miners_location_scores_view() {
+    const client = await this.pool.connect();
+    try {
+      await client.query(
+        "\
+            REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_location_scores WITH DATA;\
+            ",
+      );
+    } catch (err) {
+      WARNING(`[RefreshMinersLocationScoresMatView] ${err}`);
     }
     client.release();
   }
