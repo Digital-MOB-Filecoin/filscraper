@@ -882,6 +882,7 @@ async function refresh_views() {
   await db.refresh_miners_emission_scores_view();
   await db.refresh_miners_location_scores_view();
   await db.refresh_miners_green_scores_view();
+  await db.refresh_messages_stats();
   INFO("Refresh Views, done");
 }
 
@@ -909,6 +910,9 @@ const mainLoop = async (_) => {
     await migrations.run();
     await migrations.create_indexes();
     INFO("Run migrations, done");
+    INFO("REFRESH START - refresh_messages_stats");
+    await db.refresh_messages_stats();
+    INFO("REFRESH DONE - refresh_messages_stats");
 
     if (config.scraper.reprocess != 1 && config.scraper.lock_views != 1) {
       if (config.scraper.await_refresh_views != 1) {
