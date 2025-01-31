@@ -1186,6 +1186,21 @@ class DB {
       "DeleteOldMessages",
     );
   }
+
+  async update_fil_messages_per_day() {
+    await this.Query(
+      `
+       INSERT INTO fil_messages_per_day (day, message_count)
+       SELECT DATE_TRUNC('day', to_timestamp(("Block" * 30) + 1598306400))::date AS day,
+       COUNT(*) AS message_count
+       FROM fil_messages
+       GROUP BY day
+       ORDER BY day DESC
+       ON CONFLICT (day) DO UPDATE
+       SET message_count = EXCLUDED.message_count;`,
+      "UpdateFilMessagesPerDay",
+    );
+  }
 }
 
 module.exports = {
