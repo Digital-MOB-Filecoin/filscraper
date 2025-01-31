@@ -78,9 +78,7 @@ class NovaApi {
         }
       }
 
-      console.time("a");
       await db.nova_api_data_add(minerConfidenceScores);
-      console.timeEnd("a");
       INFO("[Nova_API_success] Confidence scores inserted successfully.");
     } catch (err) {
       ERROR(`[Nova_API_error] ${err}`);
