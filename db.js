@@ -559,7 +559,7 @@ class DB {
     try {
       await client.query(
         "\
-              REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_green_scores WITH DATA;\
+              REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_green_scores_v2 WITH DATA;\
               ",
       );
     } catch (err) {
