@@ -573,11 +573,25 @@ class DB {
     try {
       await client.query(
         "\
-              REFRESH MATERIALIZED VIEW CONCURRENTLY fil_messages_stats WITH DATA;\
-              ",
+                REFRESH MATERIALIZED VIEW CONCURRENTLY fil_messages_stats WITH DATA;\
+                ",
       );
     } catch (err) {
       WARNING(`[RefreshMessagesStatsMatView] ${err}`);
+    }
+    client.release();
+  }
+
+  async refresh_miners_energy_re_share_view() {
+    const client = await this.pool.connect();
+    try {
+      await client.query(
+        "\
+                REFRESH MATERIALIZED VIEW CONCURRENTLY fil_miners_energy_re_share WITH DATA;\
+                ",
+      );
+    } catch (err) {
+      WARNING(`[RefreshMinersEnergyReShareMatView] ${err}`);
     }
     client.release();
   }
