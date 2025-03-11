@@ -1,15 +1,19 @@
 version: '3.7'
 
 services:
-  postgress-server:
+  postgres-server:
     image: postgres
-    restart: always
+    restart: on-failure
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: filscraper
     networks:
       - webnet
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
   filscraper:
     container_name: filscraper
     restart: on-failure
@@ -17,17 +21,22 @@ services:
       DB_USER: postgres
       DB_PASSWORD: password
       DB_NAME: filscraper
-      DB_HOST: postgress-server
+      DB_HOST: postgres-server
     build:
       context: .
       target: development
     volumes:
       - .:/usr/src/app
       - node_modules:/usr/src/app/node_modules
-    command: node index.js
+    command: nodemon index.js
+    depends_on:
+      - postgres-server
     networks:
       - webnet
+    env_file:
+      - .env
 networks:
   webnet:
 volumes:
   node_modules:
+  pgdata:
